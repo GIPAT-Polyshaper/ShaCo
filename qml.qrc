@@ -1,5 +1,15 @@
 <RCC>
     <qresource prefix="/">
         <file>main.qml</file>
+        <file>MainView.qml</file>
+        <file>MainViewForm.ui.qml</file>
+        <file>ShapeLibraryView.qml</file>
+        <file>ShapeLibraryViewForm.ui.qml</file>
+        <file>CutPreparationView.qml</file>
+        <file>CutPreparationViewForm.ui.qml</file>
+        <file>CutView.qml</file>
+        <file>CutViewForm.ui.qml</file>
+        <file>TemperatureControl.qml</file>
+        <file>TemperatureControlForm.ui.qml</file>
     </qresource>
 </RCC>
