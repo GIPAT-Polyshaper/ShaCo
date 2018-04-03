@@ -1,23 +1,28 @@
 import QtQuick 2.4
 import QtQuick.Controls 2.3
+import QtQuick.Layouts 1.3
 
-Item {
-    width: 400
-    height: 400
+RowLayout {
+    id: row
 
-    Row {
-        id: row
-        anchors.fill: parent
+    Text {
+        id: text1
+        Layout.fillHeight: true
+        Layout.preferredHeight: 80
+        Layout.fillWidth: false
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        text: qsTr("Temperature")
 
-        Text {
-            id: text1
-            text: qsTr("Text")
-            font.pixelSize: 12
-        }
+        font.pixelSize: 12
+    }
 
-        Slider {
-            id: slider
-            value: 0.5
-        }
+    Slider {
+        id: slider
+        Layout.fillHeight: true
+        Layout.preferredHeight: 80
+        Layout.fillWidth: true
+
+        value: 0.5
     }
 }

@@ -7,7 +7,6 @@ Item {
 
     Column {
         id: column
-        anchors.fill: parent
 
         Row {
             id: row

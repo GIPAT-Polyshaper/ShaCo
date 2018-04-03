@@ -6,5 +6,8 @@
         <file>CutPreparationView.qml</file>
         <file>CutView.qml</file>
         <file>TemperatureControl.qml</file>
+        <file>FilterControl.qml</file>
+        <file>SortControl.qml</file>
+        <file>log_160.png</file>
     </qresource>
 </RCC>
