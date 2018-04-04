@@ -14,32 +14,31 @@ Window {
         anchors.fill: parent
     }
 
-    Component {
+    MainView {
         id: mainView
-        MainView {
-            onShapeLibraryRequested: stack.push(shapeLibraryView)
-            onStartCuttingRequested: stack.push(cutPreparationView)
-        }
+        visible: false
+        onShapeLibraryRequested: stack.push(shapeLibraryView)
+        onStartCuttingRequested: stack.push(cutPreparationView)
     }
 
-    Component {
+
+    ShapeLibraryView {
         id: shapeLibraryView
-        ShapeLibraryView {
-            onBack: stack.pop()
-        }
+        visible: false
+        onBack: stack.pop()
     }
 
-    Component {
+    CutPreparationView {
         id: cutPreparationView
-        CutPreparationView {
-            onBack: stack.pop()
-            onStartCutRequested: stack.push(cutView)
-        }
+        visible: false
+        onBack: stack.pop()
+        onStartCutRequested: stack.push(cutView)
     }
 
-    Component {
+    CutView {
         id: cutView
-        CutView {
-        }
+        visible: false
+
+        onBack: stack.pop(mainView)
     }
 }
