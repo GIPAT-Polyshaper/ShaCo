@@ -9,5 +9,6 @@
         <file>FilterControl.qml</file>
         <file>SortControl.qml</file>
         <file>log_160.png</file>
+        <file>TerminalView.qml</file>
     </qresource>
 </RCC>
