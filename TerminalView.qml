@@ -7,7 +7,7 @@ ColumnLayout {
 
     signal back
 
-    TextEdit {
+    TextArea {
         id: textEdit
         Layout.fillHeight: true
         Layout.fillWidth: true
@@ -37,7 +37,7 @@ ColumnLayout {
             font.pixelSize: 12
         }
 
-        TextInput {
+        TextEdit {
             id: textInput
             Layout.fillHeight: true
             Layout.fillWidth: true
