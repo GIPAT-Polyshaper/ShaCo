@@ -9,13 +9,11 @@ ColumnLayout {
     signal startCuttingRequested
 
     RowLayout {
-        id: row
         Layout.fillHeight: false
         Layout.preferredHeight: 80
         Layout.fillWidth: true
 
         Button {
-            id: button
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
@@ -30,6 +28,7 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
+            filtersForLocal: true
         }
 
         SortControl {
@@ -40,7 +39,6 @@ ColumnLayout {
     }
 
     GridView {
-        id: gridView
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
@@ -132,13 +130,11 @@ ColumnLayout {
     }
 
     RowLayout {
-        id: row1
         Layout.fillHeight: false
         Layout.preferredHeight: 80
         Layout.fillWidth: true
 
         Button {
-            id: button3
             Layout.fillWidth: false
             Layout.fillHeight: true
             Layout.margins: 3
@@ -148,7 +144,6 @@ ColumnLayout {
         }
 
         Button {
-            id: button2
             Layout.fillWidth: false
             Layout.fillHeight: true
             Layout.margins: 3
@@ -160,7 +155,6 @@ ColumnLayout {
         }
 
         Button {
-            id: button1
             Layout.fillWidth: false
             Layout.fillHeight: true
             Layout.margins: 3

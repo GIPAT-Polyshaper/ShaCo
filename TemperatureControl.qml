@@ -6,7 +6,6 @@ RowLayout {
     id: row
 
     Text {
-        id: text1
         Layout.fillHeight: true
         Layout.preferredHeight: 80
         Layout.fillWidth: false
@@ -18,7 +17,6 @@ RowLayout {
     }
 
     Slider {
-        id: slider
         Layout.fillHeight: true
         Layout.preferredHeight: 80
         Layout.fillWidth: true

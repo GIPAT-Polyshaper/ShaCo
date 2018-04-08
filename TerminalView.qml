@@ -8,7 +8,6 @@ ColumnLayout {
     signal back
 
     TextArea {
-        id: textEdit
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
@@ -21,13 +20,11 @@ ColumnLayout {
 
 
     RowLayout {
-        id: item1
         Layout.fillHeight: false
         Layout.preferredHeight: 80
         Layout.fillWidth: true
 
         Text {
-            id: text1
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
@@ -38,7 +35,6 @@ ColumnLayout {
         }
 
         TextEdit {
-            id: textInput
             Layout.fillHeight: true
             Layout.fillWidth: true
             Layout.margins: 3
@@ -49,7 +45,6 @@ ColumnLayout {
         }
 
         Button {
-            id: button
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
@@ -58,13 +53,11 @@ ColumnLayout {
     }
 
     RowLayout {
-        id: item2
         Layout.fillHeight: false
         Layout.preferredHeight: 80
         Layout.fillWidth: true
 
         Button {
-            id: button1
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3

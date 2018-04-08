@@ -8,7 +8,11 @@
         <file>TemperatureControl.qml</file>
         <file>FilterControl.qml</file>
         <file>SortControl.qml</file>
-        <file>log_160.png</file>
         <file>TerminalView.qml</file>
+    </qresource>
+    <qresource prefix="/images">
+        <file>log_160.png</file>
+        <file>downarrow.png</file>
+        <file>uparrow.png</file>
     </qresource>
 </RCC>

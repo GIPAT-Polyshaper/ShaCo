@@ -8,20 +8,17 @@ ColumnLayout {
     signal back
 
     RowLayout {
-        id: row
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
 
         Image {
-            id: image
             Layout.fillWidth: false
             Layout.fillHeight: true
-            source: "qrc:/log_160.png"
+            source: "qrc:/images/log_160.png"
         }
 
         Text {
-            id: text1
             Layout.fillWidth: true
             Layout.fillHeight: true
             text: qsTr("Text")
@@ -30,7 +27,6 @@ ColumnLayout {
     }
 
     ProgressBar {
-        id: progressBar
         Layout.fillHeight: false
         Layout.fillWidth: true
         Layout.margins: 3
@@ -38,14 +34,12 @@ ColumnLayout {
     }
 
     TemperatureControl {
-        id: temperatureControl
         Layout.fillHeight: false
         Layout.fillWidth: true
         Layout.margins: 3
     }
 
     RowLayout {
-        id: row1
         Layout.fillHeight: false
         Layout.preferredHeight: 80
         Layout.fillWidth: true
@@ -53,7 +47,6 @@ ColumnLayout {
         Layout.margins: 3
 
         Button {
-            id: button
             Layout.fillWidth: false
             Layout.fillHeight: true
             Layout.margins: 3
@@ -67,7 +60,6 @@ ColumnLayout {
         }
 
         Button {
-            id: button1
             Layout.fillWidth: false
             Layout.fillHeight: true
             Layout.margins: 3
@@ -75,7 +67,6 @@ ColumnLayout {
         }
 
         Button {
-            id: button2
             Layout.fillWidth: false
             Layout.fillHeight: true
             Layout.margins: 3
