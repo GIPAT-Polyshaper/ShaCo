@@ -9,7 +9,6 @@
         <file>FilterControl.qml</file>
         <file>SortControl.qml</file>
         <file>TerminalView.qml</file>
-        <file>main.cpp</file>
         <file>ShapesView.qml</file>
     </qresource>
     <qresource prefix="/images">

@@ -1,5 +1,5 @@
 import QtQuick 2.4
-import QtQuick.Controls 2.3
+import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 
 GridView {
@@ -12,6 +12,25 @@ GridView {
     property var selectedShapeItem: null
     property real detailsX: 0
     property real detailsY: 0
+
+    function showDialog() {
+        if (root.selectedShapeItem !== null) {
+            image.source = root.selectedShapeItem.shapeImage
+            name.text = "<b>" + root.selectedShapeItem.shapeName + "</b>"
+            description.text = root.selectedShapeItem.shapeDescription
+            tags.text = "Tags: <i>" + root.selectedShapeItem.shapeTags + "</i>"
+            otherInfo.text = "Working time: " + root.selectedShapeItem.shapeWorkingTime + "<br>" +
+                    "Panel size: " + root.selectedShapeItem.shapeOriginalSize
+            detailsDialog.visible = true
+        }
+    }
+
+    onVisibleChanged: {
+        if (visible === true) {
+            root.selectedShapeItem = null
+            timer.stop()
+        }
+    }
 
     onShapesInfoChanged: {
         var modelString = "import QtQuick 2.4; ListModel{"
@@ -90,11 +109,11 @@ GridView {
 
     Timer {
         id: timer
-        interval: 1000
+        interval: 2000
         running: false
         repeat:false
 
-        onTriggered: detailsDialog.showDialog()
+        onTriggered: root.showDialog()
     }
 
     Dialog {
@@ -103,18 +122,6 @@ GridView {
         visible: false
         x: Math.min(root.detailsX, root.width - width)
         y: Math.min(root.detailsY, root.height - height)
-
-        function showDialog() {
-            if (root.selectedShapeItem !== null) {
-                image.source = root.selectedShapeItem.shapeImage
-                name.text = "<b>" + root.selectedShapeItem.shapeName + "</b>"
-                description.text = root.selectedShapeItem.shapeDescription
-                tags.text = "Tags: <i>" + root.selectedShapeItem.shapeTags + "</i>"
-                otherInfo.text = "Working time: " + root.selectedShapeItem.shapeWorkingTime + "<br>" +
-                        "Panel size: " + root.selectedShapeItem.shapeOriginalSize
-                detailsDialog.visible = true
-            }
-        }
 
         ColumnLayout {
             anchors.fill: parent

@@ -1,5 +1,5 @@
 import QtQuick 2.4
-import QtQuick.Controls 2.3
+import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 
 ColumnLayout {
@@ -32,17 +32,17 @@ ColumnLayout {
         }
     }
 
+    TemperatureControl {
+        Layout.fillHeight: false
+        Layout.fillWidth: true
+        Layout.margins: 3
+    }
+
     Image {
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
         source: "qrc:/images/log_160.png"
-    }
-
-    TemperatureControl {
-        Layout.fillHeight: false
-        Layout.fillWidth: true
-        Layout.margins: 3
     }
 
     RowLayout {
