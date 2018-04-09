@@ -41,6 +41,6 @@ ColumnLayout {
             CheckBox {
                 text: qsTr("Category (once checkbox per category?)")
             }
-          }
+        }
     }
 }
