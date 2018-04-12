@@ -6,7 +6,7 @@ Window {
     visible: true
     minimumWidth: 600
     minimumHeight: 800
-    title: qsTr("Hello World")
+    title: qsTr("ShaCo")
 
     StackView {
         id: stack
