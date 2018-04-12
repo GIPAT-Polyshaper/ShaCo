@@ -6,15 +6,12 @@
         <file>CutPreparationView.qml</file>
         <file>CutView.qml</file>
         <file>TemperatureControl.qml</file>
-        <file>FilterControl.qml</file>
         <file>SortControl.qml</file>
         <file>TerminalView.qml</file>
         <file>ShapesView.qml</file>
     </qresource>
     <qresource prefix="/images">
         <file>log_160.png</file>
-        <file>downarrow.png</file>
-        <file>uparrow.png</file>
     </qresource>
     <qresource prefix="/shapes">
         <file alias="01.gif">shapes/01.gif</file>
@@ -54,5 +51,6 @@
         <file alias="35.jpg">shapes/35.jpg</file>
         <file alias="library.js">shapes/library.js</file>
         <file alias="local.js">shapes/local.js</file>
+        <file>allshapes.js</file>
     </qresource>
 </RCC>

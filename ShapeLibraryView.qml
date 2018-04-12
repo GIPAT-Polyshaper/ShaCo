@@ -8,45 +8,6 @@ ColumnLayout {
 
     signal back
 
-    RowLayout {
-        Layout.fillHeight: false
-        Layout.preferredHeight: 80
-        Layout.fillWidth: true
-
-        Button {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-            text: qsTr("Reload")
-        }
-
-        Text {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            text: qsTr("Hourglass")
-        }
-
-        Item {
-            Layout.fillWidth: true
-        }
-
-        FilterControl {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-            filtersForLocal: false
-        }
-
-        SortControl {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-        }
-    }
-
     ShapesView {
         Layout.fillHeight: true
         Layout.fillWidth: true

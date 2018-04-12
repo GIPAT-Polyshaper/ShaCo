@@ -9,36 +9,6 @@ ColumnLayout {
     signal shapeLibraryRequested
     signal startCuttingRequested
 
-    RowLayout {
-        Layout.fillHeight: false
-        Layout.preferredHeight: 80
-        Layout.fillWidth: true
-
-        Button {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-            text: qsTr("Info")
-        }
-
-        Item {
-            Layout.fillWidth: true
-        }
-
-        FilterControl {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-            filtersForLocal: true
-        }
-
-        SortControl {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-        }
-    }
-
     ShapesView {
         Layout.fillHeight: true
         Layout.fillWidth: true
