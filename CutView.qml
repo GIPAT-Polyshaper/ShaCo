@@ -7,34 +7,37 @@ ColumnLayout {
 
     signal back
 
-    RowLayout {
-        Layout.fillHeight: true
+    property var itemToCut: null
+
+    Image {
         Layout.fillWidth: true
+        Layout.fillHeight: true
         Layout.margins: 3
-
-        Image {
-            Layout.fillWidth: false
-            Layout.fillHeight: true
-            source: "qrc:/images/log_160.png"
-        }
-
-        Text {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            text: qsTr("Text")
-            font.pixelSize: 12
-        }
+        source: (itemToCut !== null) ? itemToCut.image : ""
+        fillMode: Image.PreserveAspectFit
+        horizontalAlignment: Image.AlignHCenter
+        verticalAlignment: Image.AlignVCenter
     }
 
     ProgressBar {
         Layout.fillHeight: false
+        Layout.preferredHeight: 80
         Layout.fillWidth: true
         Layout.margins: 3
         value: 0.5
+
+        Text {
+            anchors.fill: parent
+            z: 10
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            text: qsTr("Remaining time") + ": 10:34"
+        }
     }
 
     TemperatureControl {
         Layout.fillHeight: false
+        Layout.preferredHeight: 80
         Layout.fillWidth: true
         Layout.margins: 3
     }
@@ -43,8 +46,6 @@ ColumnLayout {
         Layout.fillHeight: false
         Layout.preferredHeight: 80
         Layout.fillWidth: true
-
-        Layout.margins: 3
 
         Button {
             Layout.fillWidth: false

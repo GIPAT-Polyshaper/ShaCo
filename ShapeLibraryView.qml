@@ -12,7 +12,7 @@ ColumnLayout {
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
-        sortType: "shapesLibrary"
+        showPersonalCategory: false
 
         shapesInfo: LibraryShapes.shapes()
     }

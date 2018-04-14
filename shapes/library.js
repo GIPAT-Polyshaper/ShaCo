@@ -145,22 +145,6 @@ function shapes() {
             "originalSize": "40cm x 40cm"
         },
         {
-            "name": "Bazinga! (1)",
-            "description": "Sheldon's Bazinga! (version 1)",
-            "category": "Decor",
-            "image": "qrc:/shapes/19.png",
-            "workingTime": "09:17",
-            "originalSize": "40cm x 40cm"
-        },
-        {
-            "name": "Bazinga! (2)",
-            "description": "Sheldon's Bazinga! (version 2)",
-            "category": "Decor",
-            "image": "qrc:/shapes/20.png",
-            "workingTime": "09:36",
-            "originalSize": "40cm x 40cm"
-        },
-        {
             "name": "Who's Your Daddy",
             "description": "Who's Your Daddy with Darth Vader",
             "category": "Decor",

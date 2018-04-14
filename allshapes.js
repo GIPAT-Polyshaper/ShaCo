@@ -145,17 +145,17 @@ function shapes() {
             "originalSize": "40cm x 40cm"
         },
         {
-            "name": "Bazinga! (1)",
-            "description": "Sheldon's Bazinga! (version 1)",
-            "category": "Decor",
+            "name": "My Shape 1",
+            "description": "Created with Polyshaper Inkscape plugin",
+            "category": "Personal",
             "image": "qrc:/shapes/19.png",
             "workingTime": "09:17",
             "originalSize": "40cm x 40cm"
         },
         {
-            "name": "Bazinga! (2)",
-            "description": "Sheldon's Bazinga! (version 2)",
-            "category": "Decor",
+            "name": "My Shape 2",
+            "description": "Created with Polyshaper Inkscape plugin",
+            "category": "Personal",
             "image": "qrc:/shapes/20.png",
             "workingTime": "09:36",
             "originalSize": "40cm x 40cm"

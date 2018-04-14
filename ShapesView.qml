@@ -11,7 +11,7 @@ ColumnLayout{
     // These must be realtive to the grid frame of reference
     property real detailsX: 0
     property real detailsY: 0
-    property string sortType: "local"
+    property bool showPersonalCategory: false
 
     function selectedItem() {
         return grid.model.get(grid.currentIndex)
@@ -71,14 +71,6 @@ ColumnLayout{
         Layout.fillWidth: true
 
         Item {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-            height: sortControl.height
-            width: sortControl.width
-        }
-
-        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
         }
@@ -120,17 +112,22 @@ ColumnLayout{
             onCheckedChanged: if (checked) root.currentCategory = "Decor"
         }
 
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-        }
-
-        SortControl {
-            id: sortControl
+        Button {
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
-            sortType: root.sortType
+            visible: root.showPersonalCategory
+            text: qsTr("Personal")
+            flat: true
+            checkable: true
+            ButtonGroup.group: categoryGroup
+
+            onCheckedChanged: if (checked) root.currentCategory = "Personal"
+        }
+
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
         }
     }
 

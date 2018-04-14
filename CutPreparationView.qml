@@ -10,35 +10,51 @@ ColumnLayout {
 
     property var itemToCut: null
 
-    RowLayout {
+    Item {
+        id: info
         Layout.fillHeight: false
         Layout.fillWidth: true
         Layout.preferredHeight: 200
         Layout.margins: 3
 
         Image {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-            source: itemToCut !== null ? itemToCut.image : ""
+            id: image
+            x: 0
+            y: 0
+            width: 200
+            height: parent.height
+            source: root.itemToCut !== null ? root.itemToCut.image : ""
             fillMode: Image.PreserveAspectFit
             horizontalAlignment: Image.AlignHCenter
             verticalAlignment: Image.AlignVCenter
         }
 
-        Text {
-            Layout.fillHeight: true
-            Layout.fillWidth: true
-            Layout.margins: 3
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            text: qsTr("Shape description")
-            font.pixelSize: 12
+        ScrollView {
+            x: image.width + 5
+            y: 0
+            width: parent.width - image.width - 5
+            height: parent.height
+            clip: true
+
+            Text {
+                height: Math.max(contentHeight, info.height)
+                width: info.width
+                horizontalAlignment: Text.AlignLeft
+                verticalAlignment: Text.AlignVCenter
+                text: (root.itemToCut === null) ?
+                          "" :
+                          "<b>" + root.itemToCut.name + "</b><br>" +
+                          root.itemToCut.description + "<br>" +
+                          "Category: <i>" + root.itemToCut.category + "</i><br>" +
+                          "Working time: " + root.itemToCut.workingTime + "<br>" +
+                          "Panel size: " + root.itemToCut.originalSize
+            }
         }
     }
 
     TemperatureControl {
         Layout.fillHeight: false
+        Layout.preferredHeight: 80
         Layout.fillWidth: true
         Layout.margins: 3
     }

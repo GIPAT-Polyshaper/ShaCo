@@ -19,7 +19,7 @@ ColumnLayout {
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
-        sortType: "local"
+        showPersonalCategory: true
 
         shapesInfo: LocalShapes.shapes()
     }

@@ -11,6 +11,8 @@ Window {
     title: qsTr("ShaCo")
 
     property string statusText: ""
+    property bool showSortControl: false
+    property string sortType: "local"
 
     ColumnLayout {
         anchors.fill: parent
@@ -37,6 +39,13 @@ Window {
 
                 text: "<b><i>" + root.statusText + "</b></i>"
             }
+
+            SortControl {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.showSortControl
+                sortType: root.sortType
+            }
         }
 
         StackView {
@@ -61,7 +70,12 @@ Window {
         onShapeLibraryRequested: stack.push(shapeLibraryView)
         onStartCuttingRequested: stack.push(cutPreparationView)
 
-        onVisibleChanged: if (visible) root.statusText = qsTr("Your shapes")
+        onVisibleChanged:
+            if (visible) {
+                root.showSortControl = true
+                root.sortType = "local"
+                root.statusText = qsTr("Your shapes")
+            }
     }
 
     ShapeLibraryView {
@@ -69,7 +83,12 @@ Window {
         visible: false
         onBack: stack.pop()
 
-        onVisibleChanged: if (visible) root.statusText = qsTr("Shape library")
+        onVisibleChanged:
+            if (visible) {
+                root.showSortControl = true
+                root.sortType = "shapeLibrary"
+                root.statusText = qsTr("Shape library")
+            }
     }
 
     CutPreparationView {
@@ -80,6 +99,7 @@ Window {
 
         onVisibleChanged:
             if (visible) {
+                root.showSortControl = false
                 root.statusText = qsTr("Preparing to cut")
                 cutPreparationView.itemToCut = mainView.selectedItem()
             }
@@ -90,7 +110,12 @@ Window {
         visible: false
         onBack: stack.pop(mainView)
 
-        onVisibleChanged: if (visible) root.statusText = qsTr("Cutting...")
+        onVisibleChanged:
+            if (visible) {
+                root.showSortControl = false
+                root.statusText = qsTr("Cutting...")
+                cutView.itemToCut = mainView.selectedItem()
+            }
     }
 
     TerminalView {
@@ -98,6 +123,10 @@ Window {
         visible: false
         onBack: stack.pop()
 
-        onVisibleChanged: if (visible) root.statusText = qsTr("Terminal")
+        onVisibleChanged:
+            if (visible) {
+                root.showSortControl = false
+                root.statusText = qsTr("Terminal")
+            }
     }
 }
