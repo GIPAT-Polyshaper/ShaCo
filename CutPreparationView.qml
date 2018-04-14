@@ -8,6 +8,8 @@ ColumnLayout {
     signal back
     signal startCutRequested
 
+    property var itemToCut: null
+
     RowLayout {
         Layout.fillHeight: false
         Layout.fillWidth: true
@@ -18,7 +20,10 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
-            source: "qrc:/images/log_160.png"
+            source: itemToCut !== null ? itemToCut.image : ""
+            fillMode: Image.PreserveAspectFit
+            horizontalAlignment: Image.AlignHCenter
+            verticalAlignment: Image.AlignVCenter
         }
 
         Text {

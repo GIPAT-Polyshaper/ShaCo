@@ -9,10 +9,17 @@ ColumnLayout {
     signal shapeLibraryRequested
     signal startCuttingRequested
 
+    function selectedItem() {
+        return shapesView.selectedItem()
+    }
+
     ShapesView {
+        id: shapesView
+
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
+        sortType: "local"
 
         shapesInfo: LocalShapes.shapes()
     }

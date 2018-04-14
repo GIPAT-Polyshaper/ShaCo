@@ -6,27 +6,34 @@ ColumnLayout{
     id: root
 
     property var shapesInfo
-    property var selectedShapeItem: null
+    property var hoveredComponent
     property string currentCategory: "3D Puzzle"
+    // These must be realtive to the grid frame of reference
     property real detailsX: 0
     property real detailsY: 0
+    property string sortType: "local"
+
+    function selectedItem() {
+        return grid.model.get(grid.currentIndex)
+    }
 
     function showDialog() {
         if (root.selectedShapeItem !== null) {
-            image.source = root.selectedShapeItem.shapeImage
-            name.text = "<b>" + root.selectedShapeItem.shapeName + "</b>"
-            description.text = root.selectedShapeItem.shapeDescription
-            category.text = "Category: <i>" + root.selectedShapeItem.shapeCategory + "</i>"
-            otherInfo.text = "Working time: " + root.selectedShapeItem.shapeWorkingTime + "<br>" +
-                    "Panel size: " + root.selectedShapeItem.shapeOriginalSize
+            image.source = root.hoveredComponent.image
+            name.text = "<b>" + root.hoveredComponent.name + "</b>"
+            description.text = root.hoveredComponent.description
+            category.text = "Category: <i>" + root.hoveredComponent.category + "</i>"
+            otherInfo.text = "Working time: " + root.hoveredComponent.workingTime + "<br>" +
+                    "Panel size: " + root.hoveredComponent.originalSize
             detailsDialog.visible = true
         }
     }
 
     onVisibleChanged: {
         if (visible === true) {
-            root.selectedShapeItem = null
             timer.stop()
+        } else {
+            detailsDialog.visible = false
         }
     }
 
@@ -58,19 +65,17 @@ ColumnLayout{
     }
 
     RowLayout {
+        id: header
         Layout.fillHeight: false
         Layout.preferredHeight: 40
         Layout.fillWidth: true
 
-        Image {
+        Item {
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
-            Layout.preferredWidth: sortControl.width
-            source: "qrc:/images/log_160.png"
-            fillMode: Image.PreserveAspectFit
-            horizontalAlignment: Image.AlignLeft
-            verticalAlignment: Image.AlignVCenter
+            height: sortControl.height
+            width: sortControl.width
         }
 
         Item {
@@ -125,6 +130,7 @@ ColumnLayout{
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
+            sortType: root.sortType
         }
     }
 
@@ -132,67 +138,72 @@ ColumnLayout{
         id: grid
         Layout.fillHeight: true
         Layout.fillWidth: true
-        cellHeight: 160
-        cellWidth: width / Math.floor(width / 160)
+        cellHeight: cellSize
+        cellWidth: width / Math.floor(width / cellSize)
         clip: true
 
-        delegate: Item {
-            x: 5
-            height: 140
+        property real cellSize: 170
+        property real borderWidth: 5
 
-            property string shapeName: name
-            property string shapeDescription: description
-            property string shapeCategory: category
-            property url shapeImage: image
-            property string shapeWorkingTime: workingTime
-            property string shapeOriginalSize: originalSize
-
-            Column {
-                spacing: 5
-                Image {
-                    width: 120
-                    height: 120
-                    source: image
-                    fillMode: Image.PreserveAspectFit
-                    anchors.horizontalCenter: parent.horizontalCenter
-                }
-
-                Text {
-                    x: 5
-                    text: name
-                    font.bold: true
-                    anchors.horizontalCenter: parent.horizontalCenter
-                }
-            }
+        highlight: Rectangle {
+            color: "#00000000"
+            border.width: grid.borderWidth
+            border.color: "orange"
+            radius: 3
         }
 
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
+        delegate: Item {
+            x: 0
+            y: 0
+            width: grid.cellSize
+            height: grid.cellSize
 
-            onPositionChanged: {
-                // We have to compute the position in the whole view, not in the currently visible area
-                var viewYDisplacement = grid.visibleArea.yPosition * grid.contentHeight
-                var item = grid.itemAt(mouse.x, mouse.y + viewYDisplacement)
-                if (item !== null) {
-                    if (root.selectedShapeItem !== item) {
-                        timer.restart()
-                        detailsDialog.visible = false
-                        root.selectedShapeItem = item
-                        root.detailsX = item.x + item.width / 2
-                        root.detailsY = item.y - viewYDisplacement + item.height / 2
-                    }
-                } else {
-                    root.selectedShapeItem = null
-                    timer.stop()
+            property real internalSize: grid.cellSize - 2 * grid.borderWidth
+
+            Image {
+                id: itemImage
+                x: grid.borderWidth
+                y: grid.borderWidth
+                width: parent.internalSize
+                height: parent.internalSize / 7 * 6
+                source: image
+                fillMode: Image.PreserveAspectFit
+                horizontalAlignment: Image.AlignHCenter
+                verticalAlignment: Image.AlignVCenter
+            }
+
+            Text {
+                x: grid.borderWidth
+                y: grid.borderWidth + itemImage.height
+                width: parent.internalSize
+                height: parent.height - itemImage.height
+                text: name
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
+            }
+
+            MouseArea {
+                hoverEnabled: true
+                anchors.fill: parent
+
+                onClicked: grid.currentIndex = index
+
+                onPositionChanged: {
+                    root.hoveredComponent = grid.model.get(index)
+                    timer.restart()
+                    detailsDialog.visible = false
+                    root.detailsX = parent.x + mouse.x
+                    root.detailsY = (parent.y - grid.visibleArea.yPosition * grid.contentHeight) + mouse.y
                 }
+
+                onExited: timer.stop()
             }
         }
     }
 
     Timer {
         id: timer
-        interval: 2000
+        interval: 1500
         running: false
         repeat:false
 
@@ -204,7 +215,7 @@ ColumnLayout{
         modal: false
         visible: false
         x: Math.min(root.detailsX, grid.width - width)
-        y: Math.min(root.detailsY, grid.height - height)
+        y: header.height + Math.min(root.detailsY, grid.height - height)
 
         ColumnLayout {
             anchors.fill: parent

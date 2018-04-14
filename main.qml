@@ -1,23 +1,56 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Window 2.2
+import QtQuick.Layouts 1.3
 
 Window {
+    id: root
     visible: true
     minimumWidth: 600
     minimumHeight: 800
     title: qsTr("ShaCo")
 
-    StackView {
-        id: stack
-        initialItem: mainView
-        anchors.fill: parent
-        focus: true
+    property string statusText: ""
 
-        Keys.onPressed: {
-            if (stack.currentItem !== terminalView && event.key === Qt.Key_T && event.modifiers === Qt.ControlModifier) {
-                stack.push(terminalView)
-                event.accepted = true
+    ColumnLayout {
+        anchors.fill: parent
+
+        Item {
+            Layout.fillHeight: false
+            Layout.preferredHeight: 40
+            Layout.fillWidth: true
+
+            Image {
+                height: 40
+                source: "qrc:/images/log_160.png"
+                fillMode: Image.PreserveAspectFit
+                horizontalAlignment: Image.AlignLeft
+                verticalAlignment: Image.AlignVCenter
+                anchors.left: parent.left
+            }
+
+            Text {
+                font.pixelSize: 30
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                anchors.fill: parent
+
+                text: "<b><i>" + root.statusText + "</b></i>"
+            }
+        }
+
+        StackView {
+            id: stack
+            Layout.fillHeight: true
+            Layout.fillWidth: true
+            initialItem: mainView
+            focus: true
+
+            Keys.onPressed: {
+                if (stack.currentItem !== terminalView && event.key === Qt.Key_T && event.modifiers === Qt.ControlModifier) {
+                    stack.push(terminalView)
+                    event.accepted = true
+                }
             }
         }
     }
@@ -27,12 +60,16 @@ Window {
         visible: false
         onShapeLibraryRequested: stack.push(shapeLibraryView)
         onStartCuttingRequested: stack.push(cutPreparationView)
+
+        onVisibleChanged: if (visible) root.statusText = qsTr("Your shapes")
     }
 
     ShapeLibraryView {
         id: shapeLibraryView
         visible: false
         onBack: stack.pop()
+
+        onVisibleChanged: if (visible) root.statusText = qsTr("Shape library")
     }
 
     CutPreparationView {
@@ -40,19 +77,27 @@ Window {
         visible: false
         onBack: stack.pop()
         onStartCutRequested: stack.push(cutView)
+
+        onVisibleChanged:
+            if (visible) {
+                root.statusText = qsTr("Preparing to cut")
+                cutPreparationView.itemToCut = mainView.selectedItem()
+            }
     }
 
     CutView {
         id: cutView
         visible: false
-
         onBack: stack.pop(mainView)
+
+        onVisibleChanged: if (visible) root.statusText = qsTr("Cutting...")
     }
 
     TerminalView {
         id: terminalView
         visible: false
-
         onBack: stack.pop()
+
+        onVisibleChanged: if (visible) root.statusText = qsTr("Terminal")
     }
 }

@@ -12,6 +12,7 @@ ColumnLayout {
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
+        sortType: "shapesLibrary"
 
         shapesInfo: LibraryShapes.shapes()
     }
