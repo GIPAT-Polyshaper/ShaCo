@@ -7,11 +7,11 @@ ColumnLayout{
 
     property var shapesInfo
     property var hoveredComponent
-    property string currentCategory: "3D Puzzle"
     // These must be realtive to the grid frame of reference
     property real detailsX: 0
     property real detailsY: 0
     property bool showPersonalCategory: false
+    property string currentCategory: showPersonalCategory ? "Personal" : "3D Puzzle"
 
     function selectedItem() {
         return grid.model.get(grid.currentIndex)
@@ -79,10 +79,24 @@ ColumnLayout{
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
+            visible: root.showPersonalCategory
+            text: qsTr("Personal")
+            flat: true
+            checkable: true
+            checked: root.showPersonalCategory
+            ButtonGroup.group: categoryGroup
+
+            onCheckedChanged: if (checked) root.currentCategory = "Personal"
+        }
+
+        Button {
+            Layout.fillHeight: true
+            Layout.fillWidth: false
+            Layout.margins: 3
             text: qsTr("3D Puzzle")
             flat: true
             checkable: true
-            checked: true
+            checked: !root.showPersonalCategory
             ButtonGroup.group: categoryGroup
 
             onCheckedChanged: if (checked) root.currentCategory = "3D Puzzle"
@@ -110,19 +124,6 @@ ColumnLayout{
             ButtonGroup.group: categoryGroup
 
             onCheckedChanged: if (checked) root.currentCategory = "Decor"
-        }
-
-        Button {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-            visible: root.showPersonalCategory
-            text: qsTr("Personal")
-            flat: true
-            checkable: true
-            ButtonGroup.group: categoryGroup
-
-            onCheckedChanged: if (checked) root.currentCategory = "Personal"
         }
 
         Item {

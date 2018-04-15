@@ -15,7 +15,6 @@ ColumnLayout {
         verticalAlignment: Text.AlignVCenter
         text: qsTr("Here list of commands exchanged with microcontroller")
         readOnly: true
-        font.pixelSize: 12
     }
 
 
@@ -31,7 +30,6 @@ ColumnLayout {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: qsTr("Send command:")
-            font.pixelSize: 12
         }
 
         TextEdit {
@@ -41,7 +39,6 @@ ColumnLayout {
             horizontalAlignment: Text.AlignLeft
             verticalAlignment: Text.AlignVCenter
             text: qsTr("command...")
-            font.pixelSize: 12
         }
 
         Button {

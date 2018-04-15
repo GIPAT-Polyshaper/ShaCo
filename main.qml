@@ -55,12 +55,11 @@ Window {
             initialItem: mainView
             focus: true
 
-            Keys.onPressed: {
+            Keys.onPressed:
                 if (stack.currentItem !== terminalView && event.key === Qt.Key_T && event.modifiers === Qt.ControlModifier) {
                     stack.push(terminalView)
                     event.accepted = true
                 }
-            }
         }
     }
 
