@@ -59,11 +59,23 @@ ColumnLayout {
         Layout.margins: 3
     }
 
-    Image {
+    AnimatedImage {
+        id: moveToStart
+
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
-        source: "qrc:/images/log_160.png"
+
+        onVisibleChanged:
+            if (visible) {
+                currentFrame = 0
+                playing = true
+            } else {
+                playing = false
+            }
+
+        fillMode: Image.PreserveAspectFit
+        source: "qrc:/images/move_to_start.gif"
     }
 
     RowLayout {

@@ -12,6 +12,7 @@
     </qresource>
     <qresource prefix="/images">
         <file>log_160.png</file>
+        <file>move_to_start.gif</file>
     </qresource>
     <qresource prefix="/shapes">
         <file alias="01.gif">shapes/01.gif</file>
