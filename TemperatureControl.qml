@@ -3,12 +3,14 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 
 RowLayout {
+    property alias temperature: slider.value
+
     Text {
         Layout.fillHeight: true
         Layout.fillWidth: false
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        text: qsTr("Temperature: 0%")
+        text: qsTr("Temperature: ")
     }
 
     Slider {
@@ -20,23 +22,18 @@ RowLayout {
         value: 50
 
         background: Rectangle {
-            x: slider.leftPadding - width
-            y: slider.topPadding + (slider.availableHeight - width) / 2
-            width: slider.availableHeight / 4
-            height: slider.availableWidth
-            transformOrigin: Item.TopRight
-            rotation: -90
+            x: slider.leftPadding
+            y: slider.topPadding + 3 * slider.availableHeight / 8
+            width: slider.availableWidth
+            height: slider.availableHeight / 4
             radius: 2
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: "blue" }
-                GradientStop { position: 1.0; color: "red" }
-            }
+            color: "#d06804"
 
             Rectangle {
-                x: 0
-                y: slider.visualPosition * parent.height
-                width: parent.width
-                height: parent.height - y
+                x: slider.visualPosition * parent.width
+                y: 0
+                width:  parent.width - x
+                height: parent.height
                 color: "#bdbebf"
                 radius: 2
             }
@@ -45,18 +42,19 @@ RowLayout {
         handle: Rectangle {
             x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
             y: slider.topPadding + slider.availableHeight / 2 - height / 2
-            width: 15
+            width: 60
             height: slider.availableHeight / 2
+            radius: 5
             color: slider.pressed ? "#f0f0f0" : "#f6f6f6"
             border.color: "#bdbebf"
-        }
-    }
 
-    Text {
-        Layout.fillHeight: true
-        Layout.fillWidth: false
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        text: qsTr("100%")
+            Text {
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+
+                text: slider.value.toFixed(0) + "%"
+            }
+        }
     }
 }

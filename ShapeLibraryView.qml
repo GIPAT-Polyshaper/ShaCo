@@ -7,8 +7,11 @@ ColumnLayout {
     id: root
 
     signal back
+    signal download(var shape)
 
     ShapesView {
+        id: shapesView
+
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
@@ -19,7 +22,7 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillHeight: false
-        Layout.preferredHeight: 80
+        Layout.preferredHeight: 50
         Layout.fillWidth: true
 
         Button {
@@ -40,6 +43,8 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.margins: 3
             text: qsTr("Download")
+
+            onClicked: root.download(shapesView.selectedItem())
         }
     }
 }

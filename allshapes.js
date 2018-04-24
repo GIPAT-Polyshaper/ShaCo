@@ -145,7 +145,7 @@ function shapes() {
             "originalSize": "40cm x 40cm"
         },
         {
-            "name": "My Shape 1",
+            "name": "My Shape 2",
             "description": "Created with Polyshaper Inkscape plugin",
             "category": "Personal",
             "image": "qrc:/shapes/19.png",
@@ -153,7 +153,7 @@ function shapes() {
             "originalSize": "40cm x 40cm"
         },
         {
-            "name": "My Shape 2",
+            "name": "My Shape",
             "description": "Created with Polyshaper Inkscape plugin",
             "category": "Personal",
             "image": "qrc:/shapes/20.png",

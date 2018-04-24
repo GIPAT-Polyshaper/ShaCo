@@ -6,8 +6,8 @@ import QtQuick.Layouts 1.3
 Window {
     id: root
     visible: true
-    minimumWidth: 600
-    minimumHeight: 800
+    minimumWidth: 450
+    minimumHeight: 600
     title: qsTr("ShaCo")
 
     property string statusText: ""
@@ -82,6 +82,11 @@ Window {
         visible: false
         onBack: stack.pop()
 
+        onDownload: {
+            mainView.addShape(shape)
+            stack.pop()
+        }
+
         onVisibleChanged:
             if (visible) {
                 root.showSortControl = true
@@ -94,7 +99,10 @@ Window {
         id: cutPreparationView
         visible: false
         onBack: stack.pop()
-        onStartCutRequested: stack.push(cutView)
+        onStartCutRequested: {
+            cutView.temperature = temperature
+            stack.push(cutView)
+        }
 
         onVisibleChanged:
             if (visible) {
@@ -114,6 +122,7 @@ Window {
                 root.showSortControl = false
                 root.statusText = qsTr("Cutting...")
                 cutView.itemToCut = mainView.selectedItem()
+                cutView.startTimer()
             }
     }
 

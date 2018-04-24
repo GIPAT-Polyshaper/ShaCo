@@ -9,12 +9,12 @@ ColumnLayout {
     signal startCutRequested
 
     property var itemToCut: null
+    property alias temperature: temperatureControl.temperature
 
     Item {
         id: info
-        Layout.fillHeight: false
+        Layout.fillHeight: true
         Layout.fillWidth: true
-        Layout.preferredHeight: 200
         Layout.margins: 3
 
         Image {
@@ -53,6 +53,8 @@ ColumnLayout {
     }
 
     TemperatureControl {
+        id: temperatureControl
+
         Layout.fillHeight: false
         Layout.preferredHeight: 80
         Layout.fillWidth: true
@@ -62,7 +64,8 @@ ColumnLayout {
     AnimatedImage {
         id: moveToStart
 
-        Layout.fillHeight: true
+        Layout.fillHeight: false
+        Layout.preferredHeight: 300
         Layout.fillWidth: true
         Layout.margins: 3
 
@@ -80,7 +83,7 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillHeight: false
-        Layout.preferredHeight: 80
+        Layout.preferredHeight: 50
         Layout.fillWidth: true
 
         Button {

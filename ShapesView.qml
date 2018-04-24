@@ -146,7 +146,7 @@ ColumnLayout{
         highlight: Rectangle {
             color: "#00000000"
             border.width: grid.borderWidth
-            border.color: "orange"
+            border.color: "#d06804"
             radius: 3
         }
 

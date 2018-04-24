@@ -13,6 +13,13 @@ ColumnLayout {
         return shapesView.selectedItem()
     }
 
+    function addShape(shape) {
+        // This is to trigger a shapesInfoChanged signal in shapesView
+        var curShapes = shapesView.shapesInfo
+        curShapes.push(shape)
+        shapesView.shapesInfo = curShapes
+    }
+
     ShapesView {
         id: shapesView
 
@@ -26,7 +33,7 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillHeight: false
-        Layout.preferredHeight: 80
+        Layout.preferredHeight: 50
         Layout.fillWidth: true
 
         Button {

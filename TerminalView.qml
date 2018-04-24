@@ -20,7 +20,7 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillHeight: false
-        Layout.preferredHeight: 80
+        Layout.preferredHeight: 50
         Layout.fillWidth: true
 
         Text {
@@ -51,7 +51,7 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillHeight: false
-        Layout.preferredHeight: 80
+        Layout.preferredHeight: 50
         Layout.fillWidth: true
 
         Button {
