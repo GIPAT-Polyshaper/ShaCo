@@ -24,7 +24,7 @@ Window {
 
             Image {
                 height: 40
-                source: "qrc:/images/log_160.png"
+                source: "qrc:/images/logo.png"
                 fillMode: Image.PreserveAspectFit
                 horizontalAlignment: Image.AlignLeft
                 verticalAlignment: Image.AlignVCenter

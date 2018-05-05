@@ -1,7 +1,6 @@
 import QtQuick 2.4
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
-import "qrc:/shapes/local.js" as LocalShapes
 
 ColumnLayout {
     id: root
@@ -28,7 +27,7 @@ ColumnLayout {
         Layout.margins: 3
         showPersonalCategory: true
 
-        shapesInfo: LocalShapes.shapes()
+        shapesInfo: []
     }
 
     RowLayout {

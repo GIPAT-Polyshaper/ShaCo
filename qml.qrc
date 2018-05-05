@@ -1,57 +1,15 @@
 <RCC>
     <qresource prefix="/">
-        <file>main.qml</file>
-        <file>MainView.qml</file>
-        <file>ShapeLibraryView.qml</file>
-        <file>CutPreparationView.qml</file>
-        <file>CutView.qml</file>
-        <file>TemperatureControl.qml</file>
-        <file>SortControl.qml</file>
-        <file>TerminalView.qml</file>
-        <file>ShapesView.qml</file>
-    </qresource>
-    <qresource prefix="/images">
-        <file>log_160.png</file>
-        <file>move_to_start.gif</file>
-    </qresource>
-    <qresource prefix="/shapes">
-        <file alias="01.gif">shapes/01.gif</file>
-        <file alias="02.png">shapes/02.png</file>
-        <file alias="03.png">shapes/03.png</file>
-        <file alias="04.png">shapes/04.png</file>
-        <file alias="05.png">shapes/05.png</file>
-        <file alias="06.png">shapes/06.png</file>
-        <file alias="07.png">shapes/07.png</file>
-        <file alias="08.png">shapes/08.png</file>
-        <file alias="09.png">shapes/09.png</file>
-        <file alias="10.png">shapes/10.png</file>
-        <file alias="11.png">shapes/11.png</file>
-        <file alias="12.png">shapes/12.png</file>
-        <file alias="13.png">shapes/13.png</file>
-        <file alias="14.png">shapes/14.png</file>
-        <file alias="15.png">shapes/15.png</file>
-        <file alias="16.png">shapes/16.png</file>
-        <file alias="17.png">shapes/17.png</file>
-        <file alias="18.png">shapes/18.png</file>
-        <file alias="19.png">shapes/19.png</file>
-        <file alias="20.png">shapes/20.png</file>
-        <file alias="21.png">shapes/21.png</file>
-        <file alias="22.png">shapes/22.png</file>
-        <file alias="23.png">shapes/23.png</file>
-        <file alias="24.png">shapes/24.png</file>
-        <file alias="25.png">shapes/25.png</file>
-        <file alias="26.png">shapes/26.png</file>
-        <file alias="27.png">shapes/27.png</file>
-        <file alias="28.png">shapes/28.png</file>
-        <file alias="29.png">shapes/29.png</file>
-        <file alias="30.png">shapes/30.png</file>
-        <file alias="31.png">shapes/31.png</file>
-        <file alias="32.png">shapes/32.png</file>
-        <file alias="33.png">shapes/33.png</file>
-        <file alias="34.png">shapes/34.png</file>
-        <file alias="35.jpg">shapes/35.jpg</file>
-        <file alias="library.js">shapes/library.js</file>
-        <file alias="local.js">shapes/local.js</file>
-        <file>allshapes.js</file>
+        <file alias="main.qml">qml/main.qml</file>
+        <file alias="MainView.qml">qml/MainView.qml</file>
+        <file alias="ShapeLibraryView.qml">qml/ShapeLibraryView.qml</file>
+        <file alias="CutPreparationView.qml">qml/CutPreparationView.qml</file>
+        <file alias="CutView.qml">qml/CutView.qml</file>
+        <file alias="TemperatureControl.qml">qml/TemperatureControl.qml</file>
+        <file alias="SortControl.qml">qml/SortControl.qml</file>
+        <file alias="TerminalView.qml">qml/TerminalView.qml</file>
+        <file alias="ShapesView.qml">qml/ShapesView.qml</file>
+        <file>images/logo.png</file>
+        <file>images/move_to_start.gif</file>
     </qresource>
 </RCC>

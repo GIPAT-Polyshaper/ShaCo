@@ -1,7 +1,6 @@
 import QtQuick 2.4
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
-import "qrc:/shapes/library.js" as LibraryShapes
 
 ColumnLayout {
     id: root
@@ -17,7 +16,7 @@ ColumnLayout {
         Layout.margins: 3
         showPersonalCategory: false
 
-        shapesInfo: LibraryShapes.shapes()
+        shapesInfo: []
     }
 
     RowLayout {
