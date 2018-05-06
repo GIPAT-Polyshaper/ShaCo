@@ -6,6 +6,13 @@
 TEMPLATE = lib
 TARGET = core
 CONFIG += staticlib
+QT += serialport
+QT -= gui
 
-HEADERS += prova.h
-SOURCES += prova.cpp
+HEADERS += \
+    portdiscovery.h \
+    serialport.h \
+    machineinfo.h
+SOURCES += \
+    serialport.cpp \
+    machineinfo.cpp

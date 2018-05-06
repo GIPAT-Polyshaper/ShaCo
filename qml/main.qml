@@ -13,6 +13,8 @@ Window {
     property string statusText: ""
     property bool showSortControl: false
     property string sortType: "local"
+    property string machineName: ""
+    property string firmwareVersion: ""
 
     ColumnLayout {
         anchors.fill: parent
@@ -23,12 +25,27 @@ Window {
             Layout.fillWidth: true
 
             Image {
+                id: logoImage
+
                 height: 40
                 source: "qrc:/images/logo.png"
                 fillMode: Image.PreserveAspectFit
                 horizontalAlignment: Image.AlignLeft
                 verticalAlignment: Image.AlignVCenter
                 anchors.left: parent.left
+
+                MouseArea {
+                    id: logoImageMouseArea
+                    hoverEnabled: true
+                    anchors.fill: parent
+                }
+
+                ToolTip {
+                    delay: 1000
+                    timeout: 5000
+                    visible: logoImageMouseArea.containsMouse
+                    text: (root.machineName == "") ? qsTr("Searching machine...") : qsTr(root.machineName + " [" + root.firmwareVersion +"]")
+                }
             }
 
             Text {
@@ -45,6 +62,52 @@ Window {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.showSortControl
                 sortType: root.sortType
+            }
+
+            Connections {
+                target: controller
+                onStartedPortDiscovery: {
+                    logoAnimationTimer.running = true
+                    root.machineName = ""
+                    root.firmwareVersion = ""
+                }
+                onPortFound: {
+                    logoAnimationTimer.stopAndResetImage()
+                    root.machineName = machineName
+                    root.firmwareVersion = firmwareVersion
+                }
+            }
+
+            Timer {
+                id: logoAnimationTimer
+                interval: 100
+                running: true
+                repeat: true
+
+                property bool fading: true
+
+                function stopAndResetImage() {
+                    fading = true
+                    logoImage.opacity = 1.0
+                    running = false
+                }
+
+                onTriggered:
+                    if (fading) {
+                        if (logoImage.opacity == 0.0) {
+                            fading = false
+                            logoImage.opacity = 0.1
+                        } else {
+                            logoImage.opacity = Math.max(0.0, logoImage.opacity - 0.1001)
+                        }
+                    } else {
+                        if (logoImage.opacity == 1.0) {
+                            fading = true
+                            logoImage.opacity = 0.9
+                        } else {
+                            logoImage.opacity = Math.min(1.0, logoImage.opacity + 0.1001)
+                        }
+                    }
             }
         }
 

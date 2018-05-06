@@ -1,2 +1,4 @@
 TEMPLATE = subdirs
-SUBDIRS = prova
+SUBDIRS = \
+    portdiscovery \
+    machineinfo

@@ -5,8 +5,12 @@
 
 TEMPLATE = app
 TARGET = ShaCo
-QT += quick quickcontrols2
+QT += quick quickcontrols2 serialport
 
-SOURCES += main.cpp
+SOURCES += main.cpp \
+    controller.cpp
 LIBS += -L../core -lcore
 RESOURCES += ../qml.qrc
+
+HEADERS += \
+    controller.h

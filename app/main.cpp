@@ -1,7 +1,9 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlContext>
 #include <QQuickStyle>
 #include <iostream>
+#include "controller.h"
 
 int main(int argc, char *argv[])
 {
@@ -13,6 +15,10 @@ int main(int argc, char *argv[])
     QQuickStyle::setStyle("Fusion");
 
     QQmlApplicationEngine engine;
+
+    Controller controller;
+    engine.rootContext()->setContextProperty("controller", &controller);
+
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
     if (engine.rootObjects().isEmpty())
         return -1;
