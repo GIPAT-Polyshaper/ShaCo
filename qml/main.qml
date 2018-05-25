@@ -35,15 +35,16 @@ Window {
                 anchors.left: parent.left
 
                 MouseArea {
-                    id: logoImageMouseArea
-                    hoverEnabled: true
                     anchors.fill: parent
+
+                    onClicked: logoImageToolTip.visible = true
                 }
 
                 ToolTip {
-                    delay: 1000
-                    timeout: 5000
-                    visible: logoImageMouseArea.containsMouse
+                    id: logoImageToolTip
+                    delay: 0
+                    timeout: 3000
+                    visible: false
                     text: (root.machineName == "") ? qsTr("Searching machine...") : qsTr(root.machineName + " [" + root.firmwareVersion +"]")
                 }
             }
