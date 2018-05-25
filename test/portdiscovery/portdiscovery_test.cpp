@@ -57,7 +57,7 @@ public:
         return data.size();
     }
 
-    QByteArray read(int) override
+    QByteArray read(int, int) override
     {
         if (m_answers.isEmpty()) {
             return QByteArray();

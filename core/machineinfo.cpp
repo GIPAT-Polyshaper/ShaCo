@@ -16,7 +16,7 @@ namespace {
         return registered;
     }
 
-    QRegularExpression parseMachineInfoStr("^\\[PolyShaper (.*)\\]\\[(.*)\\]");
+    QRegularExpression parseMachineInfoStr("\\[PolyShaper (.*)\\]\\[(.*)\\]");
 }
 
 bool MachineInfo::r = registerMachineInfoMetaType();

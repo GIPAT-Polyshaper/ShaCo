@@ -12,7 +12,9 @@ QT -= gui
 HEADERS += \
     portdiscovery.h \
     serialport.h \
-    machineinfo.h
+    machineinfo.h \
+    machinecommunication.h
 SOURCES += \
     serialport.cpp \
-    machineinfo.cpp
+    machineinfo.cpp \
+    machinecommunication.cpp

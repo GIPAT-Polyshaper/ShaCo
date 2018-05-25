@@ -26,7 +26,7 @@ void MachineInfoTest::createFromStringReturnsInvalidMachineInfoForInvalidData()
 
 void MachineInfoTest::createFromStringReturnsMachineInfo()
 {
-    auto info = MachineInfo::createFromString("[PolyShaper VERSION][X.Y.Z]");
+    auto info = MachineInfo::createFromString("bla bla[PolyShaper VERSION][X.Y.Z]");
 
     QCOMPARE(info.machineName(), "VERSION");
     QCOMPARE(info.firmwareVersion(), "X.Y.Z");

@@ -11,7 +11,7 @@ Controller::Controller(QObject *parent)
     auto portDiscovery = new PortDiscovery<QSerialPortInfo>(
                 QSerialPortInfo::availablePorts,
                 [](QSerialPortInfo p){ return std::make_unique<SerialPort>(p); },
-                1000,
+                100,
                 100);
     portDiscovery->moveToThread(&m_portThread);
     connect(&m_portThread, &QThread::finished, portDiscovery, &QObject::deleteLater);

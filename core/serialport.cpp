@@ -1,4 +1,6 @@
 #include "serialport.h"
+#include <QtDebug>
+#include <QThread>
 
 SerialPortInterface::SerialPortInterface()
     : QObject()
@@ -15,7 +17,16 @@ bool SerialPort::open(QIODevice::OpenMode mode, qint32 baudRate)
 {
     m_serialPort.setBaudRate(baudRate);
     m_serialPort.setFlowControl(QSerialPort::HardwareControl);
-    return m_serialPort.open(mode);
+
+    auto retval = m_serialPort.open(mode);
+
+    // Reading and discarding initial data. We have to give Arduino some time to boot (board is
+    // reset when port is opened)
+    QThread::msleep(1500);
+    m_serialPort.waitForReadyRead(1500);
+    m_serialPort.readAll();
+
+    return retval;
 }
 
 qint64 SerialPort::write(const QByteArray& data)
@@ -23,10 +34,10 @@ qint64 SerialPort::write(const QByteArray& data)
     return m_serialPort.write(data);
 }
 
-QByteArray SerialPort::read(int msec)
+QByteArray SerialPort::read(int msec, int maxBytes)
 {
     if (m_serialPort.waitForReadyRead(msec)) {
-        return m_serialPort.read(100000); // TODO-TOMMY QUI NON VALORE HARDCODATO.
+        return m_serialPort.read(maxBytes); // TODO-TOMMY QUI NON VALORE HARDCODATO.
     }
 
     return QByteArray();

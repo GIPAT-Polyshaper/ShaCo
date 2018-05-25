@@ -1,4 +1,5 @@
 TEMPLATE = subdirs
 SUBDIRS = \
     portdiscovery \
-    machineinfo
+    machineinfo \
+    machinecommunication

@@ -45,7 +45,7 @@ public:
         , m_portListingFunc(portListingFunc)
         , m_serialPortFactory(serialPortFactory)
         , m_scanDelayMillis(scanDelayMillis)
-        , m_maxReadAttepmtsPerPort(maxReadAttemptsPerPort)
+        , m_maxReadAttemptsPerPort(maxReadAttemptsPerPort)
         , m_timer(new QTimer(this))
         , m_serialPort()
     {
@@ -97,15 +97,14 @@ private:
         return p.vendorIdentifier() == 0x2341 && p.productIdentifier() == 0x0043;
     }
 
-    // TODO-TOMMY: Discovery funziona solo se prima connetto l'arduino e poi faccio partire il programma. Mi pare che moserial faccia anche un flush alla connessione, vedere come fare qui...
     MachineInfo getMachineInfo(SerialPortInterface* p)
     {
         QByteArray answer;
         p->open(QIODevice::ReadWrite, QSerialPort::Baud115200);
         p->write("$I\n");
 
-        for (int i = 0; i < m_maxReadAttepmtsPerPort && !answer.endsWith("ok\r\n"); ++i) {
-            auto partial = p->read(10);
+        for (int i = 0; i < m_maxReadAttemptsPerPort && !answer.endsWith("ok\r\n"); ++i) {
+            auto partial = p->read(100, 1000);
             answer.append(partial);
         }
 
@@ -116,7 +115,7 @@ private:
     const PortListingFuncT m_portListingFunc;
     const SerialPortFactoryT m_serialPortFactory;
     const int m_scanDelayMillis;
-    const int m_maxReadAttepmtsPerPort;
+    const int m_maxReadAttemptsPerPort;
     QTimer* const m_timer;
     std::unique_ptr<SerialPortInterface> m_serialPort;
 };

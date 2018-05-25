@@ -17,7 +17,7 @@ public:
 
     virtual bool open(QIODevice::OpenMode mode, qint32 baudRate) = 0;
     virtual qint64 write(const QByteArray& data) = 0;
-    virtual QByteArray read(int msec) = 0; // waits at most msec milliseconds
+    virtual QByteArray read(int msec, int maxBytes) = 0; // waits at most msec milliseconds
 };
 
 class SerialPort : public SerialPortInterface
@@ -29,7 +29,7 @@ public:
 
     bool open(QIODevice::OpenMode mode, qint32 baudRate) override;
     qint64 write(const QByteArray& data) override;
-    QByteArray read(int msec) override;
+    QByteArray read(int msec, int maxBytes) override;
 
 private:
     QSerialPort m_serialPort;
