@@ -11,6 +11,7 @@ SerialPort::SerialPort(const QSerialPortInfo& portInfo)
     : SerialPortInterface()
     , m_serialPort(portInfo)
 {
+    connect(&m_serialPort, &QSerialPort::readyRead, this, &SerialPort::dataAvailable);
 }
 
 bool SerialPort::open(QIODevice::OpenMode mode, qint32 baudRate)
@@ -37,8 +38,13 @@ qint64 SerialPort::write(const QByteArray& data)
 QByteArray SerialPort::read(int msec, int maxBytes)
 {
     if (m_serialPort.waitForReadyRead(msec)) {
-        return m_serialPort.read(maxBytes); // TODO-TOMMY QUI NON VALORE HARDCODATO.
+        return m_serialPort.read(maxBytes);
     }
 
     return QByteArray();
+}
+
+QByteArray SerialPort::readAll()
+{
+    return m_serialPort.readAll();
 }

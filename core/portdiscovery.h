@@ -12,15 +12,16 @@
 #include "serialport.h"
 
 // A separate class because PortDiscovery is template
-class PortDiscoverySignalSlots : public QObject
+class AbstractPortDiscovery : public QObject
 {
     Q_OBJECT
 
 public:
-    PortDiscoverySignalSlots(QObject* parent = nullptr)
-        : QObject(parent)
+    AbstractPortDiscovery()
     {
     }
+
+    virtual std::unique_ptr<SerialPortInterface> obtainPort() = 0;
 
 public slots:
     virtual void start() = 0;
@@ -28,20 +29,21 @@ public slots:
 signals:
     void startedDiscoveringPort();
     // After this signal is sent, it is possible to retrieve the open serial port using
-    // PortDiscovery::obtainPort()
-    void portFound(MachineInfo info);
+    // PortDiscovery::obtainPort(). portDiscoverer is the instance of PortDiscovery that found the
+    // port, beware of threading issues
+    void portFound(MachineInfo info, AbstractPortDiscovery* portDiscoverer);
 };
 
 template <class SerialPortInfo>
-class PortDiscovery : public PortDiscoverySignalSlots
+class PortDiscovery : public AbstractPortDiscovery
 {
 public:
     using PortListingFuncT = std::function<QList<SerialPortInfo>()>;
     using SerialPortFactoryT = std::function<std::unique_ptr<SerialPortInterface>(SerialPortInfo)>;
 
 public:
-    PortDiscovery(PortListingFuncT portListingFunc, SerialPortFactoryT serialPortFactory, int scanDelayMillis, int maxReadAttemptsPerPort, QObject* parent = nullptr)
-        : PortDiscoverySignalSlots(parent)
+    PortDiscovery(PortListingFuncT portListingFunc, SerialPortFactoryT serialPortFactory, int scanDelayMillis, int maxReadAttemptsPerPort)
+        : AbstractPortDiscovery()
         , m_portListingFunc(portListingFunc)
         , m_serialPortFactory(serialPortFactory)
         , m_scanDelayMillis(scanDelayMillis)
@@ -62,7 +64,7 @@ public:
 
     // This returns an open serial port for the found machine after the portFound signal is emitted.
     // Port is moved, calls following the first one return a null port
-    std::unique_ptr<SerialPortInterface> obtainPort()
+    std::unique_ptr<SerialPortInterface> obtainPort() override
     {
         return std::move(m_serialPort);
     }
@@ -80,7 +82,7 @@ private:
 
                 if (machine.isValid()) {
                     m_serialPort = std::move(serialPort);
-                    emit portFound(machine);
+                    emit portFound(machine, this);
                     scheduleNextScan = false;
                     break;
                 }

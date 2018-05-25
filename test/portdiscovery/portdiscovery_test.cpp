@@ -69,6 +69,11 @@ public:
         return answer.first;
     }
 
+    QByteArray readAll() override // Not used in this test
+    {
+        return QByteArray();
+    }
+
     // A list of couples: answers and time after which it has to be returned (in milliseconds)
     void setAnswers(QList<std::pair<QByteArray, int>> answers)
     {
@@ -83,7 +88,6 @@ private:
     QList<std::pair<QByteArray, int>> m_answers;
 };
 
-// TODO-TOMMY: Modificare leggermente grbl in modo da fargli tornare la versione della macchina per essere sicuri che nel discovery prendiamo una nostra macchina - Vedi comando $I
 class PortDiscoveryTest : public QObject
 {
     Q_OBJECT
@@ -117,11 +121,11 @@ void PortDiscoveryTest::emitAMessageWhenStartProbing()
     auto portListingFunction = [](){ return QList<TestPortInfo>(); };
     auto serialPortFactory = [](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(); };
 
-    PortDiscovery<TestPortInfo> portDiscovery(portListingFunction, serialPortFactory, 10000, 100);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10000, 100);
 
-    QSignalSpy spy(&portDiscovery, &PortDiscoverySignalSlots::startedDiscoveringPort);
+    QSignalSpy spy(&portDiscoverer, &AbstractPortDiscovery::startedDiscoveringPort);
 
-    portDiscovery.start();
+    portDiscoverer.start();
 
     QCOMPARE(spy.count(), 1);
 }
@@ -131,11 +135,11 @@ void PortDiscoveryTest::continuouslyProbeForPortsAtRegularIntervals()
     auto portListingFunction = [this]() { emit portListingFactoryCalled(); return QList<TestPortInfo>(); };
     auto serialPortFactory = [](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(); };
 
-    PortDiscovery<TestPortInfo> portDiscovery(portListingFunction, serialPortFactory, 300, 100);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 100);
 
     QSignalSpy spy(this, &PortDiscoveryTest::portListingFactoryCalled);
 
-    portDiscovery.start();
+    portDiscoverer.start();
 
     // Checking the port listing function is called multiple times
     QVERIFY(spy.wait(600));
@@ -148,11 +152,11 @@ void PortDiscoveryTest::openPortWhenTheExpectedVendorAndProductIdAreFound()
     auto portListingFunction = []() { return QList<TestPortInfo>{TestPortInfo(13, 17), TestPortInfo(0x2341, 0x0043), TestPortInfo()}; };
     auto serialPortFactory = [this](TestPortInfo p) { emit serialPortCreated(p); return std::make_unique<TestSerialPort>(); };
 
-    PortDiscovery<TestPortInfo> portDiscovery(portListingFunction, serialPortFactory, 3000, 100);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 3000, 100);
 
     QSignalSpy spy(this, &PortDiscoveryTest::serialPortCreated);
 
-    portDiscovery.start();
+    portDiscoverer.start();
 
     QCOMPARE(spy.count(), 1);
     auto portInfo = spy.at(0).at(0).value<TestPortInfo>();
@@ -167,12 +171,12 @@ void PortDiscoveryTest::askFirmwareVersionAfterOpeningPort()
     auto portListingFunction = [&portInfo]() { return QList<TestPortInfo>{portInfo}; };
     auto serialPortFactory = [serialPort](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(serialPort); };
 
-    PortDiscovery<TestPortInfo> portDiscovery(portListingFunction, serialPortFactory, 3000, 100);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 3000, 100);
 
     QSignalSpy spyOpen(serialPort, &TestSerialPort::portOpened);
     QSignalSpy spyWrite(serialPort, &TestSerialPort::dataWritten);
 
-    portDiscovery.start();
+    portDiscoverer.start();
 
     QCOMPARE(spyOpen.count(), 1);
     auto modeIsReadWrite = spyOpen.at(0).at(0).value<bool>();
@@ -192,18 +196,20 @@ void PortDiscoveryTest::signalPortFoundIfFirmwareReturnsTheCorrectVersion()
     auto portListingFunction = [&portInfo]() { return QList<TestPortInfo>{portInfo}; };
     auto serialPortFactory = [serialPort](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(serialPort); };
 
-    PortDiscovery<TestPortInfo> portDiscovery(portListingFunction, serialPortFactory, 3000, 100);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 3000, 100);
 
-    QSignalSpy spy(&portDiscovery, &PortDiscovery<TestPortInfo>::portFound);
+    QSignalSpy spy(&portDiscoverer, &PortDiscovery<TestPortInfo>::portFound);
 
-    portDiscovery.start();
+    portDiscoverer.start();
 
     QCOMPARE(spy.count(), 1);
-    auto foundPort = portDiscovery.obtainPort();
+    auto foundPort = portDiscoverer.obtainPort();
     auto machineInfo = spy.at(0).at(0).value<MachineInfo>();
+    auto signalledPortDiscoverer = spy.at(0).at(1).value<AbstractPortDiscovery*>();
     QCOMPARE(serialPort, foundPort.get());
     QCOMPARE(machineInfo.machineName(), "Oranje");
     QCOMPARE(machineInfo.firmwareVersion(), "1.2");
+    QCOMPARE(signalledPortDiscoverer, &portDiscoverer);
 }
 
 void PortDiscoveryTest::stopScanningAfterPortFound()
@@ -216,12 +222,12 @@ void PortDiscoveryTest::stopScanningAfterPortFound()
         return port;
     };
 
-    PortDiscovery<TestPortInfo> portDiscovery(portListingFunction, serialPortFactory, 300, 100);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 100);
 
-    QSignalSpy spyFound(&portDiscovery, &PortDiscovery<TestPortInfo>::portFound);
+    QSignalSpy spyFound(&portDiscoverer, &PortDiscovery<TestPortInfo>::portFound);
     QSignalSpy spyPortListing(this, &PortDiscoveryTest::portListingFactoryCalled);
 
-    portDiscovery.start();
+    portDiscoverer.start();
 
     QCOMPARE(spyFound.count(), 1);
     QVERIFY(!spyPortListing.wait(600));
@@ -233,12 +239,12 @@ void PortDiscoveryTest::ignorePortIfAnswerIsNotTheExpectedOne()
     auto portListingFunction = [&portInfo, this]() { emit portListingFactoryCalled(); return QList<TestPortInfo>{TestPortInfo(), portInfo}; };
     auto serialPortFactory = [](TestPortInfo) { auto port = std::make_unique<TestSerialPort>(); port->setAnswers({{"wrong ok\r\n", 0}}); return port; };
 
-    PortDiscovery<TestPortInfo> portDiscovery(portListingFunction, serialPortFactory, 300, 100);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 100);
 
-    QSignalSpy spyFound(&portDiscovery, &PortDiscovery<TestPortInfo>::portFound);
+    QSignalSpy spyFound(&portDiscoverer, &PortDiscovery<TestPortInfo>::portFound);
     QSignalSpy spyPortListing(this, &PortDiscoveryTest::portListingFactoryCalled);
 
-    portDiscovery.start();
+    portDiscoverer.start();
 
     // No port found, scanning continues
     QVERIFY(spyPortListing.wait(600));
@@ -257,12 +263,12 @@ void PortDiscoveryTest::onlyOpenTheFirstFoundPortInList()
         return port;
     };
 
-    PortDiscovery<TestPortInfo> portDiscovery(portListingFunction, serialPortFactory, 300, 100);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 100);
 
     QSignalSpy spyPortCreated(this, &PortDiscoveryTest::serialPortCreated);
-    QSignalSpy spyFound(&portDiscovery, &PortDiscovery<TestPortInfo>::portFound);
+    QSignalSpy spyFound(&portDiscoverer, &PortDiscovery<TestPortInfo>::portFound);
 
-    portDiscovery.start();
+    portDiscoverer.start();
 
     QCOMPARE(spyFound.count(), 1);
     QCOMPARE(spyPortCreated.count(), 1);
@@ -279,11 +285,11 @@ void PortDiscoveryTest::keepReadingUntilOkIsReceived()
         return port;
     };
 
-    PortDiscovery<TestPortInfo> portDiscovery(portListingFunction, serialPortFactory, 3000, 100);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 3000, 100);
 
-    QSignalSpy spy(&portDiscovery, &PortDiscovery<TestPortInfo>::portFound);
+    QSignalSpy spy(&portDiscoverer, &PortDiscovery<TestPortInfo>::portFound);
 
-    portDiscovery.start();
+    portDiscoverer.start();
 
     QCOMPARE(spy.count(), 1);
 }

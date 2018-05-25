@@ -7,14 +7,27 @@ ColumnLayout {
 
     signal back
 
-    TextArea {
+    Connections {
+        target: controller
+        onDataSent: {
+            textArea.text += "▶" + data
+        }
+        onDataReceived: {
+            textArea.text += "◀" + data
+        }
+    }
+
+    ScrollView {
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        text: qsTr("Here list of commands exchanged with microcontroller")
-        readOnly: true
+
+        TextArea {
+            id: textArea
+            horizontalAlignment: Text.AlignLeft
+            verticalAlignment: Text.AlignTop
+            readOnly: true
+        }
     }
 
 
@@ -32,20 +45,34 @@ ColumnLayout {
             text: qsTr("Send command:")
         }
 
-        TextEdit {
+        TextField {
+            id: textField
+
             Layout.fillHeight: true
             Layout.fillWidth: true
             Layout.margins: 3
             horizontalAlignment: Text.AlignLeft
             verticalAlignment: Text.AlignVCenter
-            text: qsTr("command...")
+
+            onAccepted:
+                if (controller.connected) {
+                    controller.sendLine(textField.text)
+                    textField.text = ""
+                }
         }
 
         Button {
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
+            enabled: controller.connected
+
             text: qsTr("Send")
+
+            onClicked: {
+                controller.sendLine(textField.text)
+                textField.text = ""
+            }
         }
     }
 

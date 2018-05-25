@@ -60,6 +60,7 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.margins: 3
             text: qsTr("Start cutting")
+            enabled: controller.connected
 
             onClicked: root.startCuttingRequested()
         }
