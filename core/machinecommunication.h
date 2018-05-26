@@ -21,11 +21,14 @@ public slots:
 signals:
     void dataSent(QByteArray data);
     void dataReceived(QByteArray data);
+    void portClosed(QString reason);
 
 private slots:
     void readData();
 
 private:
+    bool checkPortInErrorAndCloseIfTrue();
+
     std::unique_ptr<SerialPortInterface> m_serialPort;
 };
 

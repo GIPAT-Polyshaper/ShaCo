@@ -225,7 +225,7 @@ ColumnLayout{
                 Layout.preferredHeight: 240
                 Layout.preferredWidth: 240
                 fillMode: Image.PreserveAspectFit
-                anchors.horizontalCenter: parent.horizontalCenter
+                Layout.alignment: Qt.AlignHCenter
             }
 
             Text {

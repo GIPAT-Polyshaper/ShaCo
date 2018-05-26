@@ -71,7 +71,20 @@ public:
 
     QByteArray readAll() override // Not used in this test
     {
+        throw QString("readAll should not be used in this test!!!");
         return QByteArray();
+    }
+
+    bool inError() const override // Not used in this test
+    {
+        throw QString("inError should not be used in this test!!!");
+        return true;
+    }
+
+    QString errorString() const override // Not used in this test
+    {
+        throw QString("errorString should not be used in this test!!!");
+        return QString();
     }
 
     // A list of couples: answers and time after which it has to be returned (in milliseconds)

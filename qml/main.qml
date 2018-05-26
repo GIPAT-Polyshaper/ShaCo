@@ -2,6 +2,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Window 2.2
 import QtQuick.Layouts 1.3
+import QtQuick.Dialogs 1.1
 
 Window {
     id: root
@@ -15,6 +16,35 @@ Window {
     property string sortType: "local"
     property string machineName: ""
     property string firmwareVersion: ""
+
+    Connections {
+        target: controller
+        onStartedPortDiscovery: {
+            logoAnimationTimer.running = true
+            root.machineName = ""
+            root.firmwareVersion = ""
+        }
+        onPortFound: {
+            logoAnimationTimer.stopAndResetImage()
+            root.machineName = machineName
+            root.firmwareVersion = firmwareVersion
+        }
+        onPortClosed: {
+            serialPortErrorDialog.errorReason = reason
+            serialPortErrorDialog.open()
+        }
+    }
+
+    MessageDialog {
+         id: serialPortErrorDialog
+         title: qsTr("Serial port communication error")
+         text: qsTr("The serial port was closed due to an error. Reason: ") + errorReason
+         icon: StandardIcon.Critical
+         standardButtons: StandardButton.Ok
+         visible: false
+
+         property string errorReason: ""
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -63,20 +93,6 @@ Window {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.showSortControl
                 sortType: root.sortType
-            }
-
-            Connections {
-                target: controller
-                onStartedPortDiscovery: {
-                    logoAnimationTimer.running = true
-                    root.machineName = ""
-                    root.firmwareVersion = ""
-                }
-                onPortFound: {
-                    logoAnimationTimer.stopAndResetImage()
-                    root.machineName = machineName
-                    root.firmwareVersion = firmwareVersion
-                }
             }
 
             Timer {

@@ -15,6 +15,9 @@ ColumnLayout {
         onDataReceived: {
             textArea.text += "◀" + data
         }
+        onPortClosed: {
+            textArea.text += "--------\n";
+        }
     }
 
     ScrollView {

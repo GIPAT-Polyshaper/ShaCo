@@ -48,3 +48,13 @@ QByteArray SerialPort::readAll()
 {
     return m_serialPort.readAll();
 }
+
+bool SerialPort::inError() const
+{
+    return m_serialPort.error() != QSerialPort::NoError;
+}
+
+QString SerialPort::errorString() const
+{
+    return m_serialPort.errorString();
+}

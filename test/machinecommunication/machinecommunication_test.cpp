@@ -40,6 +40,7 @@ class TestSerialPort : public SerialPortInterface {
 public:
     TestSerialPort()
         : SerialPortInterface()
+        , m_inError(false)
     {}
 
     bool open(QIODevice::OpenMode, qint32) override
@@ -56,12 +57,23 @@ public:
 
     QByteArray read(int, int) override // Not used in this test
     {
+        throw QString("read should not be used in this test!!!");
         return QByteArray();
     }
 
     QByteArray readAll() override
     {
         return m_readData;
+    }
+
+    bool inError() const override
+    {
+        return m_inError;
+    }
+
+    QString errorString() const override
+    {
+        return "An error!!! ohoh";
     }
 
     QByteArray writtenData() const
@@ -76,7 +88,13 @@ public:
         emit dataAvailable();
     }
 
+    void setInError(bool inError)
+    {
+        m_inError = inError;
+    }
+
 private:
+    bool m_inError;
     QByteArray m_writtenData;
     QByteArray m_readData;
 };
@@ -93,6 +111,8 @@ private Q_SLOTS:
     void writeDataToSerialPort();
     void emitSignalWhenDataIsWritten();
     void emitSignalWhenDataIsReceived();
+    void ifPortIsInErrorAfterWriteClosePortAndEmitSignal();
+    void ifPortIsInErrorAfterReadClosePortAndEmitSignal();
 };
 
 MachineCommunicationTest::MachineCommunicationTest()
@@ -153,12 +173,55 @@ void MachineCommunicationTest::emitSignalWhenDataIsReceived()
     QSignalSpy spy(&communicator, &MachineCommunication::dataReceived);
 
     communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
-
     serialPort->simulateReceivedData("Toc toc...");
 
     QCOMPARE(spy.count(), 1);
     auto data = spy.at(0).at(0).toByteArray();
     QCOMPARE(data, "Toc toc...");
+}
+
+void MachineCommunicationTest::ifPortIsInErrorAfterWriteClosePortAndEmitSignal()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+    serialPort->setInError(true);
+
+    MachineCommunication communicator;
+
+    QSignalSpy spyPortDeleted(serialPort, &QObject::destroyed);
+    QSignalSpy spyPortClosed(&communicator, &MachineCommunication::portClosed);
+    QSignalSpy spyDataSent(&communicator, &MachineCommunication::dataSent);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.writeLine("some data to write");
+
+    QCOMPARE(spyPortDeleted.count(), 1);
+    QCOMPARE(spyPortClosed.count(), 1);
+    auto errorString = spyPortClosed.at(0).at(0).toString();
+    QCOMPARE(errorString, "An error!!! ohoh");
+    QCOMPARE(spyDataSent.count(), 0);
+}
+
+void MachineCommunicationTest::ifPortIsInErrorAfterReadClosePortAndEmitSignal()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+    serialPort->setInError(true);
+
+    MachineCommunication communicator;
+
+    QSignalSpy spyPortDeleted(serialPort, &QObject::destroyed);
+    QSignalSpy spyPortClosed(&communicator, &MachineCommunication::portClosed);
+    QSignalSpy spyDataSent(&communicator, &MachineCommunication::dataSent);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    serialPort->simulateReceivedData("Toc toc...");
+
+    QCOMPARE(spyPortDeleted.count(), 1);
+    QCOMPARE(spyPortClosed.count(), 1);
+    auto errorString = spyPortClosed.at(0).at(0).toString();
+    QCOMPARE(errorString, "An error!!! ohoh");
+    QCOMPARE(spyDataSent.count(), 0);
 }
 
 QTEST_GUILESS_MAIN(MachineCommunicationTest)
