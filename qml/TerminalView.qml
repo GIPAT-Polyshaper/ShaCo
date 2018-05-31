@@ -11,12 +11,15 @@ ColumnLayout {
         target: controller
         onDataSent: {
             textArea.text += "▶" + data
+            textAreaScroll.toEnd()
         }
         onDataReceived: {
             textArea.text += "◀" + data
+            textAreaScroll.toEnd()
         }
         onPortClosed: {
-            textArea.text += "--------\n";
+            textArea.text += "--------\n"
+            textAreaScroll.toEnd()
         }
     }
 
@@ -25,11 +28,20 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.margins: 3
 
-        TextArea {
-            id: textArea
-            horizontalAlignment: Text.AlignLeft
-            verticalAlignment: Text.AlignTop
-            readOnly: true
+        Flickable {
+            id: textAreaScroll
+            clip: true
+
+            function toEnd() {
+                contentY = -Math.min(height - contentHeight, 0)
+            }
+
+            TextArea {
+                id: textArea
+                horizontalAlignment: Text.AlignLeft
+                verticalAlignment: Text.AlignTop
+                readOnly: true
+            }
         }
     }
 
