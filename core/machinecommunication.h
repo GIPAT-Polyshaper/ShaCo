@@ -16,12 +16,16 @@ public:
 
 public slots:
     void portFound(MachineInfo info, AbstractPortDiscovery* portDiscoverer);
-    void writeLine(QByteArray data);
+    void writeData(QByteArray data);
+    void writeLine(QByteArray data); // Like writeData but adds \n at the end of data
+    void closePortWithError(QString reason);
+    void closePort();
 
 signals:
     void dataSent(QByteArray data);
     void dataReceived(QByteArray data);
-    void portClosed(QString reason);
+    void portClosedWithError(QString reason);
+    void portClosed();
 
 private slots:
     void readData();

@@ -17,6 +17,8 @@ Controller::Controller(QObject *parent)
     connect(m_portDiscoverer, &PortDiscovery<QSerialPortInfo>::portFound, m_machineCommunicator, &MachineCommunication::portFound);
     connect(m_machineCommunicator, &MachineCommunication::dataSent, this, &Controller::dataSent);
     connect(m_machineCommunicator, &MachineCommunication::dataReceived, this, &Controller::dataReceived);
+    connect(m_machineCommunicator, &MachineCommunication::portClosedWithError, this, &Controller::signalPortClosedWithError);
+    connect(m_machineCommunicator, &MachineCommunication::portClosedWithError, m_portDiscoverer, &PortDiscovery<QSerialPortInfo>::start);
     connect(m_machineCommunicator, &MachineCommunication::portClosed, this, &Controller::signalPortClosed);
     connect(m_machineCommunicator, &MachineCommunication::portClosed, m_portDiscoverer, &PortDiscovery<QSerialPortInfo>::start);
 
@@ -48,11 +50,18 @@ void Controller::signalPortFound(MachineInfo info)
     emit connectedChanged();
 }
 
-void Controller::signalPortClosed(QString reason)
+void Controller::signalPortClosedWithError(QString reason)
 {
     m_connected = false;
 
-    emit portClosed(reason);
+    emit portClosedWithError(reason);
+    emit connectedChanged();
+}
+
+void Controller::signalPortClosed()
+{
+    m_connected = false;
+
     emit connectedChanged();
 }
 

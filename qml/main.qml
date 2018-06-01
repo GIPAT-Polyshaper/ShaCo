@@ -29,7 +29,7 @@ Window {
             root.machineName = machineName
             root.firmwareVersion = firmwareVersion
         }
-        onPortClosed: {
+        onPortClosedWithError: {
             serialPortErrorDialog.errorReason = reason
             serialPortErrorDialog.open()
         }

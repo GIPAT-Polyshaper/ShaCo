@@ -13,14 +13,34 @@ void MachineCommunication::portFound(MachineInfo, AbstractPortDiscovery* portDis
     connect(m_serialPort.get(), &SerialPortInterface::dataAvailable, this, &MachineCommunication::readData);
 }
 
-void MachineCommunication::writeLine(QByteArray data)
+void MachineCommunication::writeData(QByteArray data)
 {
+    if (!m_serialPort) {
+        return;
+    }
+
     m_serialPort->write(data);
-    m_serialPort->write("\n");
 
     if (!checkPortInErrorAndCloseIfTrue()) {
-        emit dataSent(data + "\n");
+        emit dataSent(data);
     }
+}
+
+void MachineCommunication::writeLine(QByteArray data)
+{
+    writeData(data + "\n");
+}
+
+void MachineCommunication::closePortWithError(QString reason)
+{
+    emit portClosedWithError(reason);
+    m_serialPort.reset();
+}
+
+void MachineCommunication::closePort()
+{
+    emit portClosed();
+    m_serialPort.reset();
 }
 
 void MachineCommunication::readData()
@@ -35,7 +55,7 @@ void MachineCommunication::readData()
 bool MachineCommunication::checkPortInErrorAndCloseIfTrue()
 {
     if (m_serialPort->inError()) {
-        emit portClosed(m_serialPort->errorString());
+        emit portClosedWithError(m_serialPort->errorString());
         m_serialPort.reset();
 
         return true;

@@ -17,6 +17,10 @@ ColumnLayout {
             textArea.text += "◀" + data
             textAreaScroll.toEnd()
         }
+        onPortClosedWithError: {
+            textArea.text += "--------\n"
+            textAreaScroll.toEnd()
+        }
         onPortClosed: {
             textArea.text += "--------\n"
             textAreaScroll.toEnd()

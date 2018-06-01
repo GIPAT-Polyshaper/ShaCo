@@ -28,11 +28,13 @@ signals:
     void connectedChanged();
     void dataSent(QByteArray data);
     void dataReceived(QByteArray data);
-    void portClosed(QString reason);
+    void portClosedWithError(QString reason);
+    void portClosed();
 
 private slots:
     void signalPortFound(MachineInfo info);
-    void signalPortClosed(QString reason);
+    void signalPortClosedWithError(QString reason);
+    void signalPortClosed();
 
 private:
     void moveToPortThread(QObject* obj);
