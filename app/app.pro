@@ -1,0 +1,16 @@
+# Check if the config file exists
+!include(../common.pri) {
+    error("Couldn't find the common.pri file!")
+}
+
+TEMPLATE = app
+TARGET = ShaCo
+QT += quick quickcontrols2 serialport
+
+SOURCES += main.cpp \
+    controller.cpp
+LIBS += -L../core -lcore
+RESOURCES += ../qml.qrc
+
+HEADERS += \
+    controller.h
