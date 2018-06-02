@@ -1,5 +1,5 @@
 TEMPLATE = subdirs
 SUBDIRS = core app test
 
-# build must be last:
-CONFIG += ordered
+app.depends = core
+test.depends = core

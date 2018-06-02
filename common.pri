@@ -1,4 +1,4 @@
-CONFIG += c++14
+CONFIG += c++14 warn_on
 
 #Includes common configuration for all subdirectory .pro files.
 INCLUDEPATH += . ..

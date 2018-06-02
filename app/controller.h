@@ -8,6 +8,8 @@
 #include "core/machineinfo.h"
 #include "core/portdiscovery.h"
 
+// TODO-TOMMY Ora agganciare il file sender. Prima bisogna creare delle funzioni qui per ricevere il file da mandare che, oltre a creare e configurare il fileSender. Vedere anche quando distruggerlo! (tramite lo slot deleteLater, visto che fileSender sta in un altro thread). Ricordarsi anche di muovere il QIODevice nel thread worker prima di passarlo al fileSender
+// TODO-TOMMY Add a test for this class??? If so we should make it template on all components to test connections and signal that are emitted
 class Controller : public QObject
 {
     Q_OBJECT
@@ -21,6 +23,8 @@ public:
 
 public slots:
     void sendLine(QByteArray line);
+
+    // TODO-TOMMY Qui slot per settare file. Poi (o prima) aggiungere a MachineCommunication funzioni per incrementare/decrementare la temperatura. Ne servono due tipi: uno da usare prima della lavorazione (Manda comandi gcode normali) e uno da usare durante la lavorazione (con immediate commands, tutti i possibili). Qui mettere solo un tipo di funzioni e chiamare quelle di MachineCommunication a seconda dello stato
 
 signals:
     void startedPortDiscovery();

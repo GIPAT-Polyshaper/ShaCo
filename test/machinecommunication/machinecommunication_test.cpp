@@ -6,98 +6,8 @@
 #include "core/machinecommunication.h"
 #include "core/portdiscovery.h"
 #include "core/serialport.h"
-
-class TestPortDiscovery : public AbstractPortDiscovery {
-    Q_OBJECT
-
-public:
-    TestPortDiscovery(SerialPortInterface* serialPort)
-        : m_serialPort(serialPort)
-    {
-    }
-
-    std::unique_ptr<SerialPortInterface> obtainPort() override
-    {
-        emit serialPortMoved();
-
-        return std::move(m_serialPort);
-    }
-
-    void start() override
-    {
-    }
-
-signals:
-    void serialPortMoved();
-
-private:
-    std::unique_ptr<SerialPortInterface> m_serialPort;
-};
-
-class TestSerialPort : public SerialPortInterface {
-    Q_OBJECT
-
-public:
-    TestSerialPort()
-        : SerialPortInterface()
-        , m_inError(false)
-    {}
-
-    bool open(QIODevice::OpenMode, qint32) override
-    {
-        return true;
-    }
-
-    qint64 write(const QByteArray &data) override
-    {
-        m_writtenData += data;
-
-        return data.size();
-    }
-
-    QByteArray read(int, int) override // Not used in this test
-    {
-        throw QString("read should not be used in this test!!!");
-        return QByteArray();
-    }
-
-    QByteArray readAll() override
-    {
-        return m_readData;
-    }
-
-    bool inError() const override
-    {
-        return m_inError;
-    }
-
-    QString errorString() const override
-    {
-        return "An error!!! ohoh";
-    }
-
-    QByteArray writtenData() const
-    {
-        return m_writtenData;
-    }
-
-    void simulateReceivedData(QByteArray data)
-    {
-        m_readData = data;
-
-        emit dataAvailable();
-    }
-
-    void setInError(bool inError)
-    {
-        m_inError = inError;
-    }
-
-private:
-    bool m_inError;
-    QByteArray m_writtenData;
-    QByteArray m_readData;
-};
+#include "testcommon/testportdiscovery.h"
+#include "testcommon/testserialport.h"
 
 class MachineCommunicationTest : public QObject
 {
@@ -178,7 +88,7 @@ void MachineCommunicationTest::emitSignalWhenDataIsWritten()
 
     MachineCommunication communicator;
 
-    QSignalSpy spy(&communicator, &MachineCommunication::dataSent);
+    QSignalSpy spy(&communicator, &MachineCommunication::dataSent);\
 
     communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
     communicator.writeLine("some data to write");

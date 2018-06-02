@@ -1,5 +1,6 @@
 import QtQuick 2.4
 import QtQuick.Controls 2.2
+import QtQuick.Dialogs 1.2
 import QtQuick.Layouts 1.3
 
 ColumnLayout {
@@ -44,15 +45,18 @@ ColumnLayout {
             onClicked: root.shapeLibraryRequested()
         }
 
+        Item {
+            Layout.fillWidth: true
+        }
+
         Button {
             Layout.fillWidth: false
             Layout.fillHeight: true
             Layout.margins: 3
-            text: qsTr("Import")
-        }
+            text: qsTr("Import && Cut")
+            enabled: controller.connected
 
-        Item {
-            Layout.fillWidth: true
+            onClicked: fileDialog.open()
         }
 
         Button {
@@ -63,6 +67,19 @@ ColumnLayout {
             enabled: controller.connected
 
             onClicked: root.startCuttingRequested()
+        }
+    }
+
+    FileDialog {
+        id: fileDialog
+        title: "Please choose a GCode file"
+        folder: shortcuts.home
+        selectMultiple: false
+        selectExisting: true
+        nameFilters: ["GCode files (*.gcode)", "All files (*)"]
+
+        onAccepted: {
+            root.startCuttingRequested()
         }
     }
 }

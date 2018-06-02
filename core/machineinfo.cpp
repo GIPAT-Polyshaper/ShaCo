@@ -19,7 +19,7 @@ namespace {
     QRegularExpression parseMachineInfoStr("\\[PolyShaper (.*)\\]\\[(.*)\\]");
 }
 
-bool MachineInfo::r = registerMachineInfoMetaType();
+const bool MachineInfo::registered = registerMachineInfoMetaType();
 
 MachineInfo MachineInfo::createFromString(QByteArray s)
 {

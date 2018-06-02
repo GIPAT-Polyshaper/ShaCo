@@ -6,6 +6,7 @@
 TEMPLATE = app
 TARGET = ShaCo
 QT += quick quickcontrols2 serialport
+app.depends = core
 
 SOURCES += main.cpp \
     controller.cpp

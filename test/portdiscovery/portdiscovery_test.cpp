@@ -34,6 +34,7 @@ private:
 };
 Q_DECLARE_METATYPE(TestPortInfo)
 
+// Not using the mock in testcommon, we need an ad-hoc implementation
 class TestSerialPort : public SerialPortInterface {
     Q_OBJECT
 
@@ -268,7 +269,7 @@ void PortDiscoveryTest::ignorePortIfAnswerIsNotTheExpectedOne()
 void PortDiscoveryTest::onlyOpenTheFirstFoundPortInList()
 {
     TestPortInfo portInfo(0x2341, 0x0043);
-    auto portListingFunction = [&portInfo, this]() { return QList<TestPortInfo>{portInfo, portInfo}; };
+    auto portListingFunction = [&portInfo]() { return QList<TestPortInfo>{portInfo, portInfo}; };
     auto serialPortFactory = [this](TestPortInfo p) {
         emit serialPortCreated(p);
         auto port = std::make_unique<TestSerialPort>();
@@ -290,7 +291,7 @@ void PortDiscoveryTest::onlyOpenTheFirstFoundPortInList()
 void PortDiscoveryTest::keepReadingUntilOkIsReceived()
 {
     TestPortInfo portInfo(0x2341, 0x0043);
-    auto portListingFunction = [&portInfo, this]() { return QList<TestPortInfo>{portInfo}; };
+    auto portListingFunction = [&portInfo]() { return QList<TestPortInfo>{portInfo}; };
     auto serialPortFactory = [this](TestPortInfo p) {
         emit serialPortCreated(p);
         auto port = std::make_unique<TestSerialPort>();
