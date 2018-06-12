@@ -9,6 +9,7 @@
 #include "core/portdiscovery.h"
 
 // TODO-TOMMY Ora agganciare il file sender. Prima bisogna creare delle funzioni qui per ricevere il file da mandare che, oltre a creare e configurare il fileSender. Vedere anche quando distruggerlo! (tramite lo slot deleteLater, visto che fileSender sta in un altro thread). Ricordarsi anche di muovere il QIODevice nel thread worker prima di passarlo al fileSender
+// TODO-TOMMY Il coso che setta la temperatura, va agganciato a MachineCommunication prima di fare discovery, altrimenti si perde il segnale di porta aperta e non setta la temperatura iniziale!!!
 // TODO-TOMMY Add a test for this class??? If so we should make it template on all components to test connections and signal that are emitted
 class Controller : public QObject
 {

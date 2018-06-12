@@ -4,7 +4,8 @@ SUBDIRS = \
     machineinfo \
     machinecommunication \
     gcodesender \
-    testcommon
+    testcommon \
+    wiretemperaturecontroller
 
 portdiscovery.depends = testcommon
 machineinfo.depends = testcommon

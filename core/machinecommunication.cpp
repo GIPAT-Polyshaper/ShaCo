@@ -11,6 +11,8 @@ void MachineCommunication::portFound(MachineInfo, AbstractPortDiscovery* portDis
     m_serialPort = portDiscoverer->obtainPort();
 
     connect(m_serialPort.get(), &SerialPortInterface::dataAvailable, this, &MachineCommunication::readData);
+
+    emit portOpened();
 }
 
 void MachineCommunication::writeData(QByteArray data)

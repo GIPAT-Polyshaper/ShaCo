@@ -1,6 +1,5 @@
 #include <functional>
 #include <memory>
-#include <utility>
 #include <QString>
 #include <QBuffer>
 #include <QByteArray>
@@ -11,6 +10,7 @@
 #include "core/machinecommunication.h"
 #include "testcommon/testportdiscovery.h"
 #include "testcommon/testserialport.h"
+#include "testcommon/utils.h"
 
 class TestBuffer : public QBuffer
 {
@@ -82,23 +82,10 @@ private Q_SLOTS:
     void doNotSendLineIfItWouldCauseMoreThan128BytesToBeSent();
     void allowPausingAndResumingStreaming();
     void allowInterruptingStreamingAlsoWhileInPause();
-
-private:
-    static std::pair<std::unique_ptr<MachineCommunication>, TestSerialPort*> createCommunicator();
 };
 
 GCodeSenderTest::GCodeSenderTest()
 {
-}
-
-std::pair<std::unique_ptr<MachineCommunication>, TestSerialPort*> GCodeSenderTest::createCommunicator()
-{
-    auto serialPort = new TestSerialPort();
-    TestPortDiscovery portDiscoverer(serialPort);
-    auto communicator = std::make_unique<MachineCommunication>();
-    communicator->portFound(MachineInfo("a", "1"), &portDiscoverer);
-
-    return std::move(std::make_pair(std::move(communicator), serialPort));
 }
 
 void GCodeSenderTest::setGCodeStreamParentToNull()

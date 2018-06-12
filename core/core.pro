@@ -14,9 +14,11 @@ HEADERS += \
     serialport.h \
     machineinfo.h \
     machinecommunication.h \
-    gcodesender.h
+    gcodesender.h \
+    wiretemperaturecontroller.h
 SOURCES += \
     serialport.cpp \
     machineinfo.cpp \
     machinecommunication.cpp \
-    gcodesender.cpp
+    gcodesender.cpp \
+    wiretemperaturecontroller.cpp

@@ -40,7 +40,7 @@ signals:
     void streamingStarted();
     void streamingPaused();
     void streamingResumed();
-    // Namespace needed because type registered with namespace
+    // Class name needed because type registered with namespace
     void streamingEnded(GCodeSender::StreamEndReason reason, QString description);
 
 private slots:

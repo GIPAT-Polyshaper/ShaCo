@@ -14,7 +14,9 @@ LIBS += -L../../core -lcore
 
 HEADERS += \
     testportdiscovery.h \
-    testserialport.h
+    testserialport.h \
+    utils.h
 SOURCES += \
     testportdiscovery.cpp \
-    testserialport.cpp
+    testserialport.cpp \
+    utils.cpp

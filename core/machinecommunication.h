@@ -24,6 +24,7 @@ public slots:
 signals:
     void dataSent(QByteArray data);
     void dataReceived(QByteArray data);
+    void portOpened();
     void portClosedWithError(QString reason);
     void portClosed();
 

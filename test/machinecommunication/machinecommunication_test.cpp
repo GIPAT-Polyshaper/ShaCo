@@ -27,6 +27,7 @@ private Q_SLOTS:
     void ifPortIsInErrorAfterReadClosePortAndEmitSignal();
     void closePortWithError();
     void closePortWithoutError();
+    void emitSignalWhenPortIsGrabbedFromPortDiscovery();
 };
 
 MachineCommunicationTest::MachineCommunicationTest()
@@ -197,6 +198,20 @@ void MachineCommunicationTest::closePortWithoutError()
     QCOMPARE(spyPortDeleted.count(), 1);
     QCOMPARE(spyPortClosed.count(), 1);
     QCOMPARE(spyDataSent.count(), 0);
+}
+
+void MachineCommunicationTest::emitSignalWhenPortIsGrabbedFromPortDiscovery()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator;
+
+    QSignalSpy spy(&communicator, &MachineCommunication::portOpened);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+
+    QCOMPARE(spy.count(), 1);
 }
 
 QTEST_GUILESS_MAIN(MachineCommunicationTest)
