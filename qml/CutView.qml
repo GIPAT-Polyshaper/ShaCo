@@ -8,7 +8,6 @@ ColumnLayout {
     signal back
 
     property var itemToCut: null
-    property alias temperature: temperatureControl.temperature
     property int workingTime: 1000
     property int remainingTime: 0
 
@@ -25,7 +24,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.margins: 3
-        source: (itemToCut !== null) ? itemToCut.image : ""
+        source: (itemToCut != null) ? itemToCut.image : ""
         fillMode: Image.PreserveAspectFit
         horizontalAlignment: Image.AlignHCenter
         verticalAlignment: Image.AlignVCenter
@@ -39,6 +38,7 @@ ColumnLayout {
         from: 0.0
         to: 1.0
         value: 1.0 - (root.remainingTime / root.workingTime)
+        indeterminate: true
 
         Text {
             id: remainingTime
@@ -51,8 +51,8 @@ ColumnLayout {
         }
     }
 
-    TemperatureControl {
-        id: temperatureControl
+    WireControl {
+        id: wireControl
 
         Layout.fillHeight: false
         Layout.preferredHeight: 80

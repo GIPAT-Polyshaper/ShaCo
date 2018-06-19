@@ -3,7 +3,7 @@
     error("Couldn't find the test.pri file!")
 }
 
-TARGET = wiretemperaturecontroller_test
+TARGET = wirecontroller_test
 
 SOURCES += \
-        wiretemperaturecontroller_test.cpp
+    wirecontroller_test.cpp

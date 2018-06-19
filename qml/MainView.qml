@@ -64,7 +64,7 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.margins: 3
             text: qsTr("Start cutting")
-            enabled: controller.connected
+            enabled: false //controller.connected
 
             onClicked: root.startCuttingRequested()
         }
@@ -79,6 +79,7 @@ ColumnLayout {
         nameFilters: ["GCode files (*.gcode)", "All files (*)"]
 
         onAccepted: {
+            controller.setGCodeFile(fileUrl)
             root.startCuttingRequested()
         }
     }

@@ -1,4 +1,4 @@
-#include "wiretemperaturecontroller.h"
+#include "wirecontroller.h"
 #include <cmath>
 
 namespace {
@@ -10,38 +10,51 @@ namespace {
     const char coarseDecrementCommand = 0x9B;
     const char fineIncrementCommand = 0x9C;
     const char fineDecrementCommand = 0x9D;
+
+    const QByteArray wireOnCommand("M3\n");
+    const QByteArray wireOffCommand("M5\n");
 }
 
-WireTemperatureController::WireTemperatureController(MachineCommunication *communicator)
+WireController::WireController(MachineCommunication *communicator)
     : m_communicator(communicator)
     , m_wireOn(false)
     , m_baseTemperature(initialTemperature)
     , m_realTimePercent(100)
 {
-    connect(m_communicator, &MachineCommunication::portOpened, this, &WireTemperatureController::portOpened);
+    connect(m_communicator, &MachineCommunication::portOpened, this, &WireController::portOpened);
 }
 
-float WireTemperatureController::temperature() const
+float WireController::temperature() const
 {
     return m_realTimePercent * m_baseTemperature / 100.0f;
 }
 
-bool WireTemperatureController::isWireOn() const
+bool WireController::isWireOn() const
 {
     return m_wireOn;
 }
 
-float WireTemperatureController::minRealTimeTemperature() const
+float WireController::minRealTimeTemperature() const
 {
     return static_cast<float>(minPercentualRealTimeTemperature) * m_baseTemperature / 100.0f;
 }
 
-float WireTemperatureController::maxRealTimeTemperature() const
+float WireController::maxRealTimeTemperature() const
 {
     return static_cast<float>(maxPercentualRealTimeTemperature) * m_baseTemperature / 100.0f;
 }
 
-void WireTemperatureController::setTemperature(float temperature)
+int WireController::switchWireOnCommandLength() const
+{
+    return wireOnCommand.size();
+}
+
+int WireController::switchWireOffCommandLength() const
+{
+    return wireOffCommand.size();
+}
+
+void WireController::setTemperature(float temperature)
 {
     m_baseTemperature = temperature;
 
@@ -55,7 +68,7 @@ void WireTemperatureController::setTemperature(float temperature)
     emitTemperatureChanged();
 }
 
-void WireTemperatureController::setRealTimeTemperature(float temperature)
+void WireController::setRealTimeTemperature(float temperature)
 {
     const int curPercent = m_realTimePercent;
     m_realTimePercent = static_cast<int>(std::round(temperature / m_baseTemperature * 100.0f));
@@ -82,7 +95,7 @@ void WireTemperatureController::setRealTimeTemperature(float temperature)
     emitTemperatureChanged();
 }
 
-void WireTemperatureController::resetRealTimeTemperature()
+void WireController::resetRealTimeTemperature()
 {
     if (m_realTimePercent == 100) {
         return;
@@ -94,36 +107,42 @@ void WireTemperatureController::resetRealTimeTemperature()
     emitTemperatureChanged();
 }
 
-void WireTemperatureController::switchWireOn()
+void WireController::switchWireOn()
 {
     if (m_wireOn) {
         return;
     }
 
-    m_communicator->writeLine("M3");
+    m_communicator->writeData(wireOnCommand);
     m_wireOn = true;
 
     emit wireOn();
 }
 
-void WireTemperatureController::switchWireOff()
+void WireController::switchWireOff()
 {
     if (!m_wireOn) {
         return;
     }
 
-    m_communicator->writeLine("M5");
-    m_wireOn = false;
-
-    emit wireOff();
+    forceWireOff();
 }
 
-void WireTemperatureController::portOpened()
+void WireController::portOpened()
 {
+    forceWireOff();
     setTemperature(initialTemperature);
 }
 
-void WireTemperatureController::emitTemperatureChanged()
+void WireController::emitTemperatureChanged()
 {
     emit temperatureChanged(temperature());
+}
+
+void WireController::forceWireOff()
+{
+    m_communicator->writeData(wireOffCommand);
+    m_wireOn = false;
+
+    emit wireOff();
 }

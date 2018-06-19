@@ -74,7 +74,7 @@ ColumnLayout {
             verticalAlignment: Text.AlignVCenter
 
             onAccepted:
-                if (controller.connected) {
+                if (controller.connected/* && !controller.streamingGCode*/) {
                     controller.sendLine(textField.text)
                     textField.text = ""
                 }
@@ -84,7 +84,7 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
-            enabled: controller.connected
+            enabled: controller.connected/* && !controller.streamingGCode*/
 
             text: qsTr("Send")
 

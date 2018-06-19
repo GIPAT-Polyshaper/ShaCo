@@ -2,17 +2,17 @@
 #include <QSignalSpy>
 #include <QtTest>
 #include "core/machinecommunication.h"
-#include "core/wiretemperaturecontroller.h"
+#include "core/wirecontroller.h"
 #include "testcommon/testportdiscovery.h"
 #include "testcommon/testserialport.h"
 #include "testcommon/utils.h"
 
-class WireTemperatureControllerTest : public QObject
+class WireControllerTest : public QObject
 {
     Q_OBJECT
 
 public:
-    WireTemperatureControllerTest();
+    WireControllerTest();
 
 private Q_SLOTS:
     void setInitialTemperatureAndEmitSignalWhenPortIsOpened();
@@ -33,13 +33,15 @@ private Q_SLOTS:
     void resetRealTimeTemperatureDoesNothingIfRealTimeTemperatureIsEqualToBaseTemperature();
     void setRealTimeTemperatureAfterResetRealTimeTemperatureWorksCorrectly();
     void returnTheCurrentTemperature();
+    void returnTheLengthOfTheSwitchWireOnCommand();
+    void returnTheLengthOfTheSwitchWireOffCommand();
 };
 
-WireTemperatureControllerTest::WireTemperatureControllerTest()
+WireControllerTest::WireControllerTest()
 {
 }
 
-void WireTemperatureControllerTest::setInitialTemperatureAndEmitSignalWhenPortIsOpened()
+void WireControllerTest::setInitialTemperatureAndEmitSignalWhenPortIsOpened()
 {
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
@@ -47,31 +49,33 @@ void WireTemperatureControllerTest::setInitialTemperatureAndEmitSignalWhenPortIs
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
 
-    WireTemperatureController temperatureController(communicator.get());
+    WireController wireController(communicator.get());
 
-    QSignalSpy temperatureChangedSpy(&temperatureController, &WireTemperatureController::temperatureChanged);
+    QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
+    QSignalSpy wireOffSpy(&wireController, &WireController::wireOff);
 
     communicator->portFound(MachineInfo("a", "1"), &portDiscoverer);
 
-    QCOMPARE(dataSentSpy.count(), 1);
-    auto data = dataSentSpy.at(0).at(0).toByteArray();
-    QCOMPARE(data, "\x99S30\n");
+    QCOMPARE(dataSentSpy.count(), 2);
+    QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "M5\n");
+    QCOMPARE(dataSentSpy.at(1).at(0).toByteArray(), "\x99S30\n");
+    QCOMPARE(wireOffSpy.count(), 1);
     QCOMPARE(temperatureChangedSpy.count(), 1);
     auto temperature = temperatureChangedSpy.at(0).at(0).toFloat();
     QCOMPARE(temperature, 30.0f);
 }
 
-void WireTemperatureControllerTest::setTemperatureWithGCodeCommand()
+void WireControllerTest::setTemperatureWithGCodeCommand()
 {
     auto communicator = std::move(createCommunicator().first);
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
 
-    WireTemperatureController temperatureController(communicator.get());
+    WireController wireController(communicator.get());
 
-    QSignalSpy temperatureChangedSpy(&temperatureController, &WireTemperatureController::temperatureChanged);
+    QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
 
-    temperatureController.setTemperature(45.6f);
+    wireController.setTemperature(45.6f);
 
     QCOMPARE(dataSentSpy.count(), 1);
     auto data = dataSentSpy.at(0).at(0).toByteArray();
@@ -81,98 +85,98 @@ void WireTemperatureControllerTest::setTemperatureWithGCodeCommand()
     QCOMPARE(temperature, 45.6f);
 }
 
-void WireTemperatureControllerTest::switchWireOn()
+void WireControllerTest::switchWireOn()
 {
     auto communicator = std::move(createCommunicator().first);
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
 
-    WireTemperatureController temperatureController(communicator.get());
+    WireController wireController(communicator.get());
 
-    QSignalSpy wireOnSpy(&temperatureController, &WireTemperatureController::wireOn);
+    QSignalSpy wireOnSpy(&wireController, &WireController::wireOn);
 
-    QVERIFY(!temperatureController.isWireOn());
-    temperatureController.switchWireOn();
+    QVERIFY(!wireController.isWireOn());
+    wireController.switchWireOn();
 
     QCOMPARE(dataSentSpy.count(), 1);
     auto data = dataSentSpy.at(0).at(0).toByteArray();
     QCOMPARE(data, "M3\n");
     QCOMPARE(wireOnSpy.count(), 1);
-    QVERIFY(temperatureController.isWireOn());
+    QVERIFY(wireController.isWireOn());
 }
 
-void WireTemperatureControllerTest::doNotEmitSignalWhenSwitchWireOnIsCalledAndWireIsAlreadyOn()
+void WireControllerTest::doNotEmitSignalWhenSwitchWireOnIsCalledAndWireIsAlreadyOn()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
+    WireController wireController(communicator.get());
 
-    QSignalSpy wireOnSpy(&temperatureController, &WireTemperatureController::wireOn);
+    QSignalSpy wireOnSpy(&wireController, &WireController::wireOn);
 
     // Called twice, just one signal emitted
-    temperatureController.switchWireOn();
-    temperatureController.switchWireOn();
+    wireController.switchWireOn();
+    wireController.switchWireOn();
 
     QCOMPARE(wireOnSpy.count(), 1);
 }
 
-void WireTemperatureControllerTest::switchWireOff()
+void WireControllerTest::switchWireOff()
 {
     auto communicator = std::move(createCommunicator().first);
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
 
-    WireTemperatureController temperatureController(communicator.get());
+    WireController wireController(communicator.get());
 
-    QSignalSpy wireOffSpy(&temperatureController, &WireTemperatureController::wireOff);
+    QSignalSpy wireOffSpy(&wireController, &WireController::wireOff);
 
-    temperatureController.switchWireOn();
-    temperatureController.switchWireOff();
+    wireController.switchWireOn();
+    wireController.switchWireOff();
 
     QCOMPARE(dataSentSpy.count(), 2); // one for on, the other for off
     auto data = dataSentSpy.at(1).at(0).toByteArray();
     QCOMPARE(data, "M5\n");
     QCOMPARE(wireOffSpy.count(), 1);
-    QVERIFY(!temperatureController.isWireOn());
+    QVERIFY(!wireController.isWireOn());
 }
 
-void WireTemperatureControllerTest::doNotEmitSignalWhenSwitchWireOffIsCalledAndWireIsAlreadyOff()
+void WireControllerTest::doNotEmitSignalWhenSwitchWireOffIsCalledAndWireIsAlreadyOff()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
+    WireController wireController(communicator.get());
 
-    QSignalSpy wireOffSpy(&temperatureController, &WireTemperatureController::wireOff);
+    QSignalSpy wireOffSpy(&wireController, &WireController::wireOff);
 
     // Wire is off, no signal
-    temperatureController.switchWireOff();
+    wireController.switchWireOff();
 
     QCOMPARE(wireOffSpy.count(), 0);
 }
 
-void WireTemperatureControllerTest::computeTheMinumAndMaximumValuesForSetRealTimeTemperature()
+void WireControllerTest::computeTheMinumAndMaximumValuesForSetRealTimeTemperature()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
+    WireController wireController(communicator.get());
 
-    temperatureController.setTemperature(40.0f);
+    wireController.setTemperature(40.0f);
 
-    QCOMPARE(temperatureController.minRealTimeTemperature(), 4.0f);
-    QCOMPARE(temperatureController.maxRealTimeTemperature(), 80.0f);
+    QCOMPARE(wireController.minRealTimeTemperature(), 4.0f);
+    QCOMPARE(wireController.maxRealTimeTemperature(), 80.0f);
 }
 
-void WireTemperatureControllerTest::setRealTimeTemperatureToALowerTemperature()
+void WireControllerTest::setRealTimeTemperatureToALowerTemperature()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
-    temperatureController.setTemperature(40.0f);
+    WireController wireController(communicator.get());
+    wireController.setTemperature(40.0f);
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
-    QSignalSpy temperatureChangedSpy(&temperatureController, &WireTemperatureController::temperatureChanged);
+    QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
 
-    temperatureController.setRealTimeTemperature(30.0f);
+    wireController.setRealTimeTemperature(30.0f);
 
     QCOMPARE(dataSentSpy.count(), 1);
     QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "\x9B\x9B\x9D\x9D\x9D\x9D\x9D");
@@ -182,17 +186,17 @@ void WireTemperatureControllerTest::setRealTimeTemperatureToALowerTemperature()
     QCOMPARE(temperature, 30.0f);
 }
 
-void WireTemperatureControllerTest::setRealTimeTemperatureToAHigherTemperature()
+void WireControllerTest::setRealTimeTemperatureToAHigherTemperature()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
-    temperatureController.setTemperature(40.0f);
+    WireController wireController(communicator.get());
+    wireController.setTemperature(40.0f);
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
-    QSignalSpy temperatureChangedSpy(&temperatureController, &WireTemperatureController::temperatureChanged);
+    QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
 
-    temperatureController.setRealTimeTemperature(46.8f);
+    wireController.setRealTimeTemperature(46.8f);
 
     QCOMPARE(dataSentSpy.count(), 1);
     QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "\x9A\x9C\x9C\x9C\x9C\x9C\x9C\x9C");
@@ -202,17 +206,17 @@ void WireTemperatureControllerTest::setRealTimeTemperatureToAHigherTemperature()
     QCOMPARE(temperature, 46.8f);
 }
 
-void WireTemperatureControllerTest::doNotAllowReatTimeTemperaturesLowerThanMinRealTimeTemperature()
+void WireControllerTest::doNotAllowReatTimeTemperaturesLowerThanMinRealTimeTemperature()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
-    temperatureController.setTemperature(40.0f);
+    WireController wireController(communicator.get());
+    wireController.setTemperature(40.0f);
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
-    QSignalSpy temperatureChangedSpy(&temperatureController, &WireTemperatureController::temperatureChanged);
+    QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
 
-    temperatureController.setRealTimeTemperature(1.0f);
+    wireController.setRealTimeTemperature(1.0f);
 
     QCOMPARE(dataSentSpy.count(), 1);
     QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "\x9B\x9B\x9B\x9B\x9B\x9B\x9B\x9B\x9B");
@@ -222,17 +226,17 @@ void WireTemperatureControllerTest::doNotAllowReatTimeTemperaturesLowerThanMinRe
     QCOMPARE(temperature, 4.0f);
 }
 
-void WireTemperatureControllerTest::doNotAllowReatTimeTemperaturesHIgherThanMaxRealTimeTemperature()
+void WireControllerTest::doNotAllowReatTimeTemperaturesHIgherThanMaxRealTimeTemperature()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
-    temperatureController.setTemperature(40.0f);
+    WireController wireController(communicator.get());
+    wireController.setTemperature(40.0f);
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
-    QSignalSpy temperatureChangedSpy(&temperatureController, &WireTemperatureController::temperatureChanged);
+    QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
 
-    temperatureController.setRealTimeTemperature(100.0f);
+    wireController.setRealTimeTemperature(100.0f);
 
     QCOMPARE(dataSentSpy.count(), 1);
     QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "\x9A\x9A\x9A\x9A\x9A\x9A\x9A\x9A\x9A\x9A");
@@ -242,19 +246,19 @@ void WireTemperatureControllerTest::doNotAllowReatTimeTemperaturesHIgherThanMaxR
     QCOMPARE(temperature, 80.0f);
 }
 
-void WireTemperatureControllerTest::setRealTimeTemperatureMoreThanOnce()
+void WireControllerTest::setRealTimeTemperatureMoreThanOnce()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
-    temperatureController.setTemperature(40.0f);
+    WireController wireController(communicator.get());
+    wireController.setTemperature(40.0f);
 
-    temperatureController.setRealTimeTemperature(30.0f);
+    wireController.setRealTimeTemperature(30.0f);
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
-    QSignalSpy temperatureChangedSpy(&temperatureController, &WireTemperatureController::temperatureChanged);
+    QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
 
-    temperatureController.setRealTimeTemperature(10.0f);
+    wireController.setRealTimeTemperature(10.0f);
 
     QCOMPARE(dataSentSpy.count(), 1);
     QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "\x9B\x9B\x9B\x9B\x9B");
@@ -264,20 +268,20 @@ void WireTemperatureControllerTest::setRealTimeTemperatureMoreThanOnce()
     QCOMPARE(temperature, 10.0f);
 }
 
-void WireTemperatureControllerTest::whenSettingRealTimeTemperatureAfterACallToSetTemperatureStartFromResetRealTimeOverride()
+void WireControllerTest::whenSettingRealTimeTemperatureAfterACallToSetTemperatureStartFromResetRealTimeOverride()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
-    temperatureController.setTemperature(40.0f);
+    WireController wireController(communicator.get());
+    wireController.setTemperature(40.0f);
 
-    temperatureController.setRealTimeTemperature(30.0f);
-    temperatureController.setTemperature(50.0f);
+    wireController.setRealTimeTemperature(30.0f);
+    wireController.setTemperature(50.0f);
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
-    QSignalSpy temperatureChangedSpy(&temperatureController, &WireTemperatureController::temperatureChanged);
+    QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
 
-    temperatureController.setRealTimeTemperature(20.0f);
+    wireController.setRealTimeTemperature(20.0f);
 
     QCOMPARE(dataSentSpy.count(), 1);
     QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "\x9B\x9B\x9B\x9B\x9B\x9B");
@@ -287,37 +291,37 @@ void WireTemperatureControllerTest::whenSettingRealTimeTemperatureAfterACallToSe
     QCOMPARE(temperature, 20.0f);
 }
 
-void WireTemperatureControllerTest::setRealTimeTemperatureDoesNotEmitSignalIfTemperatureDoesNotChange()
+void WireControllerTest::setRealTimeTemperatureDoesNotEmitSignalIfTemperatureDoesNotChange()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
-    temperatureController.setTemperature(40.0f);
+    WireController wireController(communicator.get());
+    wireController.setTemperature(40.0f);
 
-    temperatureController.setRealTimeTemperature(30.0f);
+    wireController.setRealTimeTemperature(30.0f);
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
-    QSignalSpy temperatureChangedSpy(&temperatureController, &WireTemperatureController::temperatureChanged);
+    QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
 
-    temperatureController.setRealTimeTemperature(30.0f);
+    wireController.setRealTimeTemperature(30.0f);
 
     QCOMPARE(dataSentSpy.count(), 0);
     QCOMPARE(temperatureChangedSpy.count(), 0);
 }
 
-void WireTemperatureControllerTest::resetRealTimeTemperature()
+void WireControllerTest::resetRealTimeTemperature()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
-    temperatureController.setTemperature(40.0f);
+    WireController wireController(communicator.get());
+    wireController.setTemperature(40.0f);
 
-    temperatureController.setRealTimeTemperature(30.0f);
+    wireController.setRealTimeTemperature(30.0f);
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
-    QSignalSpy temperatureChangedSpy(&temperatureController, &WireTemperatureController::temperatureChanged);
+    QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
 
-    temperatureController.resetRealTimeTemperature();
+    wireController.resetRealTimeTemperature();
 
     QCOMPARE(dataSentSpy.count(), 1);
     QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "\x99");
@@ -327,36 +331,36 @@ void WireTemperatureControllerTest::resetRealTimeTemperature()
     QCOMPARE(temperature, 40.0f);
 }
 
-void WireTemperatureControllerTest::resetRealTimeTemperatureDoesNothingIfRealTimeTemperatureIsEqualToBaseTemperature()
+void WireControllerTest::resetRealTimeTemperatureDoesNothingIfRealTimeTemperatureIsEqualToBaseTemperature()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
-    temperatureController.setTemperature(40.0f);
+    WireController wireController(communicator.get());
+    wireController.setTemperature(40.0f);
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
-    QSignalSpy temperatureChangedSpy(&temperatureController, &WireTemperatureController::temperatureChanged);
+    QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
 
-    temperatureController.resetRealTimeTemperature();
+    wireController.resetRealTimeTemperature();
 
     QCOMPARE(dataSentSpy.count(), 0);
     QCOMPARE(temperatureChangedSpy.count(), 0);
 }
 
-void WireTemperatureControllerTest::setRealTimeTemperatureAfterResetRealTimeTemperatureWorksCorrectly()
+void WireControllerTest::setRealTimeTemperatureAfterResetRealTimeTemperatureWorksCorrectly()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
-    temperatureController.setTemperature(40.0f);
+    WireController wireController(communicator.get());
+    wireController.setTemperature(40.0f);
 
-    temperatureController.setRealTimeTemperature(30.0f);
-    temperatureController.resetRealTimeTemperature();
+    wireController.setRealTimeTemperature(30.0f);
+    wireController.resetRealTimeTemperature();
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
-    QSignalSpy temperatureChangedSpy(&temperatureController, &WireTemperatureController::temperatureChanged);
+    QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
 
-    temperatureController.setRealTimeTemperature(20.0f);
+    wireController.setRealTimeTemperature(20.0f);
 
     QCOMPARE(dataSentSpy.count(), 1);
     QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "\x9B\x9B\x9B\x9B\x9B");
@@ -366,18 +370,36 @@ void WireTemperatureControllerTest::setRealTimeTemperatureAfterResetRealTimeTemp
     QCOMPARE(temperature, 20.0f);
 }
 
-void WireTemperatureControllerTest::returnTheCurrentTemperature()
+void WireControllerTest::returnTheCurrentTemperature()
 {
     auto communicator = std::move(createCommunicator().first);
 
-    WireTemperatureController temperatureController(communicator.get());
-    temperatureController.setTemperature(40.0f);
+    WireController wireController(communicator.get());
+    wireController.setTemperature(40.0f);
 
-    temperatureController.setRealTimeTemperature(30.0f);
+    wireController.setRealTimeTemperature(30.0f);
 
-    QCOMPARE(temperatureController.temperature(), 30.0f);
+    QCOMPARE(wireController.temperature(), 30.0f);
 }
 
-QTEST_GUILESS_MAIN(WireTemperatureControllerTest)
+void WireControllerTest::returnTheLengthOfTheSwitchWireOnCommand()
+{
+    auto communicator = std::move(createCommunicator().first);
 
-#include "wiretemperaturecontroller_test.moc"
+    WireController wireController(communicator.get());
+
+    QCOMPARE(wireController.switchWireOnCommandLength(), 3);
+}
+
+void WireControllerTest::returnTheLengthOfTheSwitchWireOffCommand()
+{
+    auto communicator = std::move(createCommunicator().first);
+
+    WireController wireController(communicator.get());
+
+    QCOMPARE(wireController.switchWireOffCommandLength(), 3);
+}
+
+QTEST_GUILESS_MAIN(WireControllerTest)
+
+#include "wirecontroller_test.moc"

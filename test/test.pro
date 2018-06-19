@@ -5,9 +5,10 @@ SUBDIRS = \
     machinecommunication \
     gcodesender \
     testcommon \
-    wiretemperaturecontroller
+    wirecontroller
 
 portdiscovery.depends = testcommon
 machineinfo.depends = testcommon
 machinecommunication.depends = testcommon
 gcodesender.depends = testcommon
+wirecontroller.depends = testcommon

@@ -180,7 +180,7 @@ Window {
         visible: false
         onBack: stack.pop()
         onStartCutRequested: {
-            cutView.temperature = temperature
+            controller.startStreamingGCode()
             stack.push(cutView)
         }
 

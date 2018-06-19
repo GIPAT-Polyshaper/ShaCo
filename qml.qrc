@@ -5,7 +5,7 @@
         <file alias="ShapeLibraryView.qml">qml/ShapeLibraryView.qml</file>
         <file alias="CutPreparationView.qml">qml/CutPreparationView.qml</file>
         <file alias="CutView.qml">qml/CutView.qml</file>
-        <file alias="TemperatureControl.qml">qml/TemperatureControl.qml</file>
+        <file alias="WireControl.qml">qml/WireControl.qml</file>
         <file alias="SortControl.qml">qml/SortControl.qml</file>
         <file alias="TerminalView.qml">qml/TerminalView.qml</file>
         <file alias="ShapesView.qml">qml/ShapesView.qml</file>

@@ -25,9 +25,10 @@ namespace {
 
 const bool GCodeSender::streamEndReasonRegistered = registerStreamEndReason();
 
-GCodeSender::GCodeSender(MachineCommunication* communicator, std::unique_ptr<QIODevice>&& gcodeDevice)
+GCodeSender::GCodeSender(MachineCommunication* communicator, WireController* wireController, std::unique_ptr<QIODevice>&& gcodeDevice)
     : QObject(nullptr)
     , m_communicator(communicator)
+    , m_wireController(wireController)
     , m_device(std::move(gcodeDevice))
     , m_paused(false)
 {
@@ -52,6 +53,10 @@ void GCodeSender::streamData()
         return;
     }
 
+    // Switching wire on at start
+    m_wireController->switchWireOn();
+    m_sentBytes.enqueue(m_wireController->switchWireOnCommandLength());
+
     while (m_device && !m_device->atEnd()) {
         auto line = m_device->readLine(grblBufferSize - 1);
 
@@ -66,17 +71,18 @@ void GCodeSender::streamData()
             line += '\n';
         }
 
-        // Processing QT events while waiting for firmware buffer to find space or while in pause
-        while (m_paused || bytesSentSinceLastAck() + line.size() > grblBufferSize) {
-            QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
-        }
-
+        waitWhilePausedOrBufferFull(line.size());
         m_communicator->writeData(line);
         m_sentBytes.enqueue(line.size());
 
         // Process QT events
         QCoreApplication::processEvents();
     }
+
+    // Switching wire off at the end
+    waitWhilePausedOrBufferFull(m_wireController->switchWireOffCommandLength());
+    m_wireController->switchWireOff();
+    m_sentBytes.enqueue(m_wireController->switchWireOffCommandLength());
 
     // Waiting remaining acks
     while (m_device && !m_sentBytes.isEmpty()) {
@@ -134,9 +140,7 @@ void GCodeSender::dataReceived(QByteArray data)
         m_partialReply = m_partialReply.mid(endCommand + 2);
 
         if (okRegExpr.match(reply).hasMatch()) {
-            if (m_sentBytes.isEmpty()) {
-                qWarning("Unexpected ack!");
-            } else {
+            if (!m_sentBytes.isEmpty()) {
                 m_sentBytes.dequeue();
             }
         } else {
@@ -164,4 +168,12 @@ int GCodeSender::findEndCommandInPartialReply() const
 int GCodeSender::bytesSentSinceLastAck() const
 {
     return std::accumulate(m_sentBytes.constBegin(), m_sentBytes.constEnd(), 0);
+}
+
+void GCodeSender::waitWhilePausedOrBufferFull(int requiredSpace)
+{
+    // Processing QT events while waiting for firmware buffer to find space or while in pause
+    while (m_paused || bytesSentSinceLastAck() + requiredSpace > grblBufferSize) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+    }
 }

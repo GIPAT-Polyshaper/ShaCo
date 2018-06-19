@@ -9,7 +9,6 @@ ColumnLayout {
     signal startCutRequested
 
     property var itemToCut: null
-    property alias temperature: temperatureControl.temperature
 
     Item {
         id: info
@@ -23,7 +22,7 @@ ColumnLayout {
             y: 0
             width: 200
             height: parent.height
-            source: root.itemToCut !== null ? root.itemToCut.image : ""
+            source: root.itemToCut != null ? root.itemToCut.image : ""
             fillMode: Image.PreserveAspectFit
             horizontalAlignment: Image.AlignHCenter
             verticalAlignment: Image.AlignVCenter
@@ -41,19 +40,19 @@ ColumnLayout {
                 width: info.width
                 horizontalAlignment: Text.AlignLeft
                 verticalAlignment: Text.AlignVCenter
-                text: (root.itemToCut === null) ?
-                          "" :
+                text: (root.itemToCut == null) ?
+                          "<b>" + qsTr("Preview not available") + "</b>" :
                           "<b>" + root.itemToCut.name + "</b><br>" +
                           root.itemToCut.description + "<br>" +
-                          "Category: <i>" + root.itemToCut.category + "</i><br>" +
-                          "Working time: " + root.itemToCut.workingTime + "<br>" +
-                          "Panel size: " + root.itemToCut.originalSize
+                          qsTr("Category") + ": <i>" + root.itemToCut.category + "</i><br>" +
+                          qsTr("Working time") + ": " + root.itemToCut.workingTime + "<br>" +
+                          qsTr("Panel size") + ": " + root.itemToCut.originalSize
             }
         }
     }
 
-    TemperatureControl {
-        id: temperatureControl
+    WireControl {
+        id: wireControl
 
         Layout.fillHeight: false
         Layout.preferredHeight: 80
