@@ -6,6 +6,6 @@
 #include "core/machinecommunication.h"
 #include "testserialport.h"
 
-std::pair<std::unique_ptr<MachineCommunication>, TestSerialPort*> createCommunicator();
+std::pair<std::unique_ptr<MachineCommunication>, TestSerialPort*> createCommunicator(int hardResetDelay = 100);
 
 #endif // UTILS_H

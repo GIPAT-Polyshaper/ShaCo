@@ -31,17 +31,12 @@ public:
     // Remember to move gcodeDevice to the same thread as this class before passing it here!!!
     explicit GCodeSender(MachineCommunication* communicator, WireController* wireController, std::unique_ptr<QIODevice>&& gcodeDevice);
 
-    bool paused() const;
-
 public slots:
     void streamData();
     void interruptStreaming();
-    void pause();
-    void resume();
 
 signals:
     void streamingStarted();
-    void streamingPaused();
     void streamingResumed();
     // Class name needed because type registered with namespace
     void streamingEnded(GCodeSender::StreamEndReason reason, QString description);
@@ -55,14 +50,16 @@ private:
     void closeStream(GCodeSender::StreamEndReason reason, QString description);
     int findEndCommandInPartialReply() const;
     int bytesSentSinceLastAck() const;
-    void waitWhilePausedOrBufferFull(int requiredSpace);
+    void waitWhileBufferFull(int requiredSpace);
+    void emitStreamingEnded();
 
     MachineCommunication* const m_communicator;
     WireController* const m_wireController;
     std::unique_ptr<QIODevice> m_device; // Non const to be reset when streaming ends
     QString m_partialReply;
     QQueue<int> m_sentBytes;
-    bool m_paused;
+    GCodeSender::StreamEndReason m_streamEndReason;
+    QString m_streamEndDescription;
 };
 
 Q_DECLARE_METATYPE(GCodeSender::StreamEndReason)

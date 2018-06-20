@@ -8,6 +8,7 @@ ColumnLayout {
 
     signal shapeLibraryRequested
     signal startCuttingRequested
+    signal goToCuttingView
 
     function selectedItem() {
         return shapesView.selectedItem()
@@ -54,7 +55,8 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.margins: 3
             text: qsTr("Import && Cut")
-            enabled: controller.connected
+            enabled: controller.connected && !controller.streamingGCode
+            visible: !controller.streamingGCode
 
             onClicked: fileDialog.open()
         }
@@ -65,8 +67,20 @@ ColumnLayout {
             Layout.margins: 3
             text: qsTr("Start cutting")
             enabled: false //controller.connected
+            visible: !controller.streamingGCode
 
             onClicked: root.startCuttingRequested()
+        }
+
+        Button {
+            Layout.fillWidth: false
+            Layout.fillHeight: true
+            Layout.margins: 3
+            text: qsTr("Current cut")
+            enabled: controller.streamingGCode
+            visible: controller.streamingGCode
+
+            onClicked: root.goToCuttingView()
         }
     }
 

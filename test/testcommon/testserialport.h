@@ -9,15 +9,20 @@ class TestSerialPort : public SerialPortInterface {
 public:
     TestSerialPort();
 
-    bool open(QIODevice::OpenMode, qint32) override;
+    bool open() override;
     qint64 write(const QByteArray &data) override;
     QByteArray read(int, int) override; // Not used in this test
     QByteArray readAll() override;
     bool inError() const override;
     QString errorString() const override;
+    void close() override;
     QByteArray writtenData() const;
     void simulateReceivedData(QByteArray data);
     void setInError(bool inError);
+
+signals:
+    void portOpened();
+    void portClosed();
 
 private:
     bool m_inError;

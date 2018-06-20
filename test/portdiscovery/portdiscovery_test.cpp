@@ -44,9 +44,9 @@ public:
         , m_answers()
     {}
 
-    bool open(QIODevice::OpenMode mode, qint32 baudRate) override
+    bool open() override
     {
-        emit portOpened(mode == QIODevice::ReadWrite, baudRate);
+        emit portOpened();
 
         return true;
     }
@@ -88,6 +88,11 @@ public:
         return QString();
     }
 
+    void close() override // Not used in this test
+    {
+        throw QString("inError should not be used in this test!!!");
+    }
+
     // A list of couples: answers and time after which it has to be returned (in milliseconds)
     void setAnswers(QList<std::pair<QByteArray, int>> answers)
     {
@@ -95,7 +100,7 @@ public:
     }
 
 signals:
-    void portOpened(bool modeIsReadWrite, qint32 baudRate);
+    void portOpened();
     void dataWritten(const QByteArray& data);
 
 private:
@@ -193,10 +198,6 @@ void PortDiscoveryTest::askFirmwareVersionAfterOpeningPort()
     portDiscoverer.start();
 
     QCOMPARE(spyOpen.count(), 1);
-    auto modeIsReadWrite = spyOpen.at(0).at(0).value<bool>();
-    auto baudRate = spyOpen.at(0).at(1).value<qint32>();
-    QVERIFY(modeIsReadWrite);
-    QCOMPARE(baudRate, QSerialPort::Baud115200);
     QCOMPARE(spyWrite.count(), 1);
     auto writtenData = spyWrite.at(0).at(0).toByteArray();
     QCOMPARE(writtenData, "$I\n");

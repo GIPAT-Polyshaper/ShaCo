@@ -21,7 +21,7 @@ WireController::WireController(MachineCommunication *communicator)
     , m_baseTemperature(initialTemperature)
     , m_realTimePercent(100)
 {
-    connect(m_communicator, &MachineCommunication::portOpened, this, &WireController::portOpened);
+    connect(m_communicator, &MachineCommunication::machineInitialized, this, &WireController::machineInitialized);
 }
 
 float WireController::temperature() const
@@ -128,10 +128,10 @@ void WireController::switchWireOff()
     forceWireOff();
 }
 
-void WireController::portOpened()
+void WireController::machineInitialized()
 {
     forceWireOff();
-    setTemperature(initialTemperature);
+    setTemperature(temperature());
 }
 
 void WireController::emitTemperatureChanged()

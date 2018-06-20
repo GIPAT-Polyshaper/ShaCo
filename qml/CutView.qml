@@ -8,26 +8,24 @@ ColumnLayout {
     signal back
 
     property var itemToCut: null
-    property int workingTime: 1000
-    property int remainingTime: 0
 
-    function startTimer() {
-        if (itemToCut != null) {
-            var splitted = itemToCut.workingTime.split(":")
-            root.workingTime = Number(splitted[0]) * 60 + Number(splitted[1])
-            root.remainingTime = root.workingTime
-            timer.start()
-        }
-    }
+//    Image {
+//        Layout.fillWidth: true
+//        Layout.fillHeight: true
+//        Layout.margins: 3
+//        source: (itemToCut != null) ? itemToCut.image : ""
+//        fillMode: Image.PreserveAspectFit
+//        horizontalAlignment: Image.AlignHCenter
+//        verticalAlignment: Image.AlignVCenter
+//    }
 
-    Image {
+    Text {
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.margins: 3
-        source: (itemToCut != null) ? itemToCut.image : ""
-        fillMode: Image.PreserveAspectFit
-        horizontalAlignment: Image.AlignHCenter
-        verticalAlignment: Image.AlignVCenter
+        text: "<b>" + qsTr("Preview not available") + "</b>"
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
     }
 
     ProgressBar {
@@ -37,8 +35,8 @@ ColumnLayout {
         Layout.margins: 10
         from: 0.0
         to: 1.0
-        value: 1.0 - (root.remainingTime / root.workingTime)
-        indeterminate: true
+        value: 1.0
+        indeterminate: controller.streamingGCode
 
         Text {
             id: remainingTime
@@ -47,7 +45,7 @@ ColumnLayout {
             z: 10
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
-            text: qsTr("Remaining time: ") + Math.floor(root.remainingTime / 60) + ":" + (root.remainingTime % 60 < 10 ? "0" + (root.remainingTime % 60) : root.remainingTime % 60)
+            text: controller.streamingGCode ? qsTr("Remaining time: Unknown") : qsTr("Cut Completed")
         }
     }
 
@@ -82,28 +80,22 @@ ColumnLayout {
             Layout.fillWidth: false
             Layout.fillHeight: true
             Layout.margins: 3
-            text: qsTr("Stop")
+            enabled: !controller.stoppingStreaming && controller.streamingGCode
+            text: controller.stoppingStreaming ? qsTr("Stopping...") : qsTr("Stop")
+
+            onClicked: controller.stopStreaminGCode()
         }
 
         Button {
             Layout.fillWidth: false
             Layout.fillHeight: true
             Layout.margins: 3
-            text: qsTr("Pause")
+            enabled: !controller.stoppingStreaming && controller.streamingGCode
+            checkable: true
+            checked: controller.paused
+            text: controller.paused ? qsTr("Paused") : qsTr("Pause")
+
+            onCheckedChanged: checked ? controller.feedHold() : controller.resumeFeedHold()
         }
-    }
-
-    Timer {
-        id: timer
-        interval: 1000
-        running: false
-        repeat: true
-
-        onTriggered:
-            if (root.remainingTime > 0) {
-                root.remainingTime = root.remainingTime - 1
-            } else {
-                timer.stop()
-            }
     }
 }

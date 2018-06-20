@@ -4,7 +4,10 @@
 #include <QObject>
 #include "machinecommunication.h"
 
-// TODO-TOMMY should perhaps tell this class when a set-temperature command is sent, e.g. via terminal or gcodesender. For the moment we ignore this, our g-codes should not have set-temperature instructions and terminal is not meant to be used by normal users. To make things clear: this works as long as no temperature command is issued outside this class
+// NOTE we should perhaps tell this class when a set-temperature command is sent, e.g. via terminal
+//      or gcodesender. For the moment we ignore this, our g-codes should not have set-temperature
+//      instructions and terminal is not meant to be used by normal users. To make things clear:
+//      this works as long as no temperature command is issued outside this class.
 class WireController : public QObject
 {
     Q_OBJECT
@@ -31,7 +34,7 @@ signals:
     void wireOff();
 
 private slots:
-    void portOpened();
+    void machineInitialized();
 
 private:
     void emitTemperatureChanged();

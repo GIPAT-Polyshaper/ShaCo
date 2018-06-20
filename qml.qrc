@@ -11,5 +11,6 @@
         <file alias="ShapesView.qml">qml/ShapesView.qml</file>
         <file>images/logo.png</file>
         <file>images/move_to_start.gif</file>
+        <file>images/gears.gif</file>
     </qresource>
 </RCC>

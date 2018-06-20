@@ -6,8 +6,9 @@ TestSerialPort::TestSerialPort()
 {
 }
 
-bool TestSerialPort::open(QIODevice::OpenMode, qint32)
+bool TestSerialPort::open()
 {
+    emit portOpened();
     return true;
 }
 
@@ -37,6 +38,11 @@ bool TestSerialPort::inError() const
 QString TestSerialPort::errorString() const
 {
     return "An error!!! ohoh";
+}
+
+void TestSerialPort::close()
+{
+    emit portClosed();
 }
 
 QByteArray TestSerialPort::writtenData() const

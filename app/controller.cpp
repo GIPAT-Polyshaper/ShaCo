@@ -12,6 +12,8 @@ Controller::Controller(QObject *parent)
     , m_gcodeSender(nullptr)
     , m_connected(false)
     , m_streamingGCode(false)
+    , m_stoppingStreaming(false)
+    , m_paused(false)
 {
     moveToPortThread(m_portDiscoverer);
     moveToPortThread(m_machineCommunicator);
@@ -26,6 +28,7 @@ Controller::Controller(QObject *parent)
     connect(m_machineCommunicator, &MachineCommunication::portClosedWithError, m_portDiscoverer, &PortDiscovery<QSerialPortInfo>::start);
     connect(m_machineCommunicator, &MachineCommunication::portClosed, this, &Controller::signalPortClosed);
     connect(m_machineCommunicator, &MachineCommunication::portClosed, m_portDiscoverer, &PortDiscovery<QSerialPortInfo>::start);
+    connect(m_wireController, &WireController::temperatureChanged, this, &Controller::wireTemperatureChanged);
 
     m_portThread.start();
     QMetaObject::invokeMethod(m_portDiscoverer, "start");
@@ -47,6 +50,11 @@ bool Controller::streamingGCode() const
     return m_streamingGCode;
 }
 
+bool Controller::stoppingStreaming() const
+{
+    return m_stoppingStreaming;
+}
+
 bool Controller::wireOn() const
 {
     bool isWireOn = false;
@@ -65,6 +73,11 @@ float Controller::wireTemperature() const
     return temperature;
 }
 
+bool Controller::paused() const
+{
+    return m_paused;
+}
+
 void Controller::sendLine(QByteArray line)
 {
     QMetaObject::invokeMethod(m_machineCommunicator, [communicator = m_machineCommunicator, line](){ communicator->writeLine(line); });
@@ -75,10 +88,13 @@ void Controller::setGCodeFile(QUrl fileUrl)
     auto file = std::make_unique<QFile>(fileUrl.toLocalFile());
     file->moveToThread(&m_portThread);
 
+    if (m_gcodeSender) {
+        QMetaObject::invokeMethod(m_gcodeSender, [sender = m_gcodeSender](){ sender->deleteLater(); });
+    }
+
     m_gcodeSender = new GCodeSender(m_machineCommunicator, m_wireController, std::move(file));
     moveToPortThread(m_gcodeSender);
 
-    connect(m_gcodeSender, &GCodeSender::streamingEnded, m_gcodeSender, &GCodeSender::deleteLater);
     connect(m_gcodeSender, &GCodeSender::streamingStarted, this, &Controller::streamingStarted);
     connect(m_gcodeSender, &GCodeSender::streamingEnded, this, &Controller::streamingEnded);
 }
@@ -116,6 +132,40 @@ void Controller::setWireTemperature(float temperature)
 void Controller::startStreamingGCode()
 {
     QMetaObject::invokeMethod(m_gcodeSender, [sender = m_gcodeSender](){ sender->streamData(); });
+
+    unsetPaused();
+}
+
+void Controller::stopStreaminGCode()
+{
+    QMetaObject::invokeMethod(m_gcodeSender, [sender = m_gcodeSender](){ sender->interruptStreaming(); });
+
+    unsetPaused();
+
+    m_stoppingStreaming = true;
+    emit stoppingStreamingChanged();
+}
+
+void Controller::feedHold()
+{
+    if (m_paused) {
+        return;
+    }
+
+    QMetaObject::invokeMethod(m_machineCommunicator, [communicator = m_machineCommunicator](){ communicator->feedHold(); });
+
+    setPaused();
+}
+
+void Controller::resumeFeedHold()
+{
+    if (!m_paused) {
+        return;
+    }
+
+    QMetaObject::invokeMethod(m_machineCommunicator, [communicator = m_machineCommunicator](){ communicator->resumeFeedHold(); });
+
+    unsetPaused();
 }
 
 void Controller::signalPortFound(MachineInfo info)
@@ -148,17 +198,45 @@ void Controller::streamingStarted()
     emit streamingGCodeChanged();
 }
 
-void Controller::streamingEnded(GCodeSender::StreamEndReason, QString)
+void Controller::streamingEnded(GCodeSender::StreamEndReason reason, QString description)
 {
     m_streamingGCode = false;
 
-    // TODO-TOMMY QUI ALTRO SEGNALE SE STREAM FINISCE CON ERRORE
+    if (reason != GCodeSender::StreamEndReason::Completed &&
+        reason != GCodeSender::StreamEndReason::UserInterrupted) {
+        emit streamingEndedWithError(description);
+    }
 
     emit streamingGCodeChanged();
+
+    if (m_stoppingStreaming) {
+        m_stoppingStreaming = false;
+        emit stoppingStreamingChanged();
+    }
 }
 
 void Controller::moveToPortThread(QObject* obj)
 {
     obj->moveToThread(&m_portThread);
     connect(&m_portThread, &QThread::finished, obj, &QObject::deleteLater);
+}
+
+void Controller::setPaused()
+{
+    if (m_paused) {
+        return;
+    }
+
+    m_paused = true;
+    emit pausedChanged();
+}
+
+void Controller::unsetPaused()
+{
+    if (!m_paused) {
+        return;
+    }
+
+    m_paused = false;
+    emit pausedChanged();
 }

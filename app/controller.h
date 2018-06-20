@@ -11,16 +11,16 @@
 #include "core/portdiscovery.h"
 #include "core/wirecontroller.h"
 
-// TODO-TOMMY Ora agganciare il file sender. Prima bisogna creare delle funzioni qui per ricevere il file da mandare che, oltre a creare e configurare il fileSender. Vedere anche quando distruggerlo! (tramite lo slot deleteLater, visto che fileSender sta in un altro thread). Ricordarsi anche di muovere il QIODevice nel thread worker prima di passarlo al fileSender
-// TODO-TOMMY Disabilitare il terminale se sto mandando il file, senn? succede un casino
 // TODO-TOMMY Add a test for this class??? If so we should make it template on all components to test connections and signal that are emitted
 class Controller : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool connected READ connected NOTIFY connectedChanged)
     Q_PROPERTY(bool streamingGCode READ streamingGCode NOTIFY streamingGCodeChanged)
+    Q_PROPERTY(bool stoppingStreaming READ stoppingStreaming NOTIFY stoppingStreamingChanged)
     Q_PROPERTY(bool wireOn READ wireOn WRITE setWireOn NOTIFY wireOnChanged)
     Q_PROPERTY(float wireTemperature READ wireTemperature WRITE setWireTemperature NOTIFY wireTemperatureChanged)
+    Q_PROPERTY(bool paused READ paused NOTIFY pausedChanged)
 
 public:
     explicit Controller(QObject *parent = nullptr);
@@ -28,8 +28,10 @@ public:
 
     bool connected() const;
     bool streamingGCode() const;
+    bool stoppingStreaming() const;
     bool wireOn() const;
     float wireTemperature() const;
+    bool paused() const;
 
 public slots:
     void sendLine(QByteArray line);
@@ -37,8 +39,9 @@ public slots:
     void setWireOn(bool wireOn);
     void setWireTemperature(float temperature);
     void startStreamingGCode();
-
-    //AGGIUNGERE CODICE PER FAR FUNZIONARE STOP, PAUSE E PER FERMARE TUTTO QUANDO SI CHIUDE IL PROGRAMMA (METTERE DIALOG CON "OK USCIRE"? SE SI STA TAGLIANDO E SI CERCA DI CHIUDERE LA FINESTRA). POI SISTEMARE: SE STO TAGLIANDO NON DEVO PASSARE PER PRE-CUT PER TORNARE ALLA PAGINA DEL CUT E PULSANTE IMPORT DEVE ESSERE DISABILITATO. NELLA FINESTRA DI CUT AGGIUNGERE TESTO: "PREVIEW NOT AVAILABLE" E POI LA PROGRESS BAR FARLA PROGRESS INDETERMINATA.
+    void stopStreaminGCode();
+    void feedHold();
+    void resumeFeedHold();
 
 signals:
     void startedPortDiscovery();
@@ -49,8 +52,11 @@ signals:
     void portClosedWithError(QString reason);
     void portClosed();
     void streamingGCodeChanged();
+    void stoppingStreamingChanged();
     void wireOnChanged();
     void wireTemperatureChanged();
+    void streamingEndedWithError(QString reason);
+    void pausedChanged();
 
 private slots:
     void signalPortFound(MachineInfo info);
@@ -61,6 +67,8 @@ private slots:
 
 private:
     void moveToPortThread(QObject* obj);
+    void setPaused();
+    void unsetPaused();
 
     QThread m_portThread;
     PortDiscovery<QSerialPortInfo>* const m_portDiscoverer;
@@ -69,6 +77,8 @@ private:
     GCodeSender* m_gcodeSender;
     bool m_connected;
     bool m_streamingGCode;
+    bool m_stoppingStreaming;
+    bool m_paused;
 };
 
 #endif // CONTROLLER_H
