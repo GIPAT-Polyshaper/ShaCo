@@ -7,22 +7,24 @@ ColumnLayout {
 
     signal back
 
+    property int bufferSize: 10000
+
     Connections {
         target: controller
         onDataSent: {
-            textArea.text += "▶" + data
+            textArea.appendText("▶" + data)
             textAreaScroll.toEnd()
         }
         onDataReceived: {
-            textArea.text += "◀" + data
+            textArea.appendText("◀" + data)
             textAreaScroll.toEnd()
         }
         onPortClosedWithError: {
-            textArea.text += "--------\n"
+            textArea.appendText("--------\n")
             textAreaScroll.toEnd()
         }
         onPortClosed: {
-            textArea.text += "--------\n"
+            textArea.appendText("--------\n")
             textAreaScroll.toEnd()
         }
     }
@@ -45,6 +47,14 @@ ColumnLayout {
                 horizontalAlignment: Text.AlignLeft
                 verticalAlignment: Text.AlignTop
                 readOnly: true
+
+                function appendText(toAppend) {
+                    text += toAppend
+
+                    if (text.length > bufferSize) {
+                        text = text.substr(-bufferSize)
+                    }
+                }
             }
         }
     }
@@ -74,7 +84,7 @@ ColumnLayout {
             verticalAlignment: Text.AlignVCenter
 
             onAccepted:
-                if (controller.connected) {
+                if (controller.connected && !controller.streamingGCode) {
                     controller.sendLine(textField.text)
                     textField.text = ""
                 }
@@ -84,7 +94,7 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
-            enabled: controller.connected
+            enabled: controller.connected && !controller.streamingGCode
 
             text: qsTr("Send")
 

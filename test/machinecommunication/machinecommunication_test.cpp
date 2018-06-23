@@ -1,103 +1,14 @@
 #include <memory>
+#include <QCoreApplication>
+#include <QElapsedTimer>
+#include <QSignalSpy>
 #include <QString>
 #include <QtTest>
-#include <QCoreApplication>
-#include <QSignalSpy>
 #include "core/machinecommunication.h"
 #include "core/portdiscovery.h"
 #include "core/serialport.h"
-
-class TestPortDiscovery : public AbstractPortDiscovery {
-    Q_OBJECT
-
-public:
-    TestPortDiscovery(SerialPortInterface* serialPort)
-        : m_serialPort(serialPort)
-    {
-    }
-
-    std::unique_ptr<SerialPortInterface> obtainPort() override
-    {
-        emit serialPortMoved();
-
-        return std::move(m_serialPort);
-    }
-
-    void start() override
-    {
-    }
-
-signals:
-    void serialPortMoved();
-
-private:
-    std::unique_ptr<SerialPortInterface> m_serialPort;
-};
-
-class TestSerialPort : public SerialPortInterface {
-    Q_OBJECT
-
-public:
-    TestSerialPort()
-        : SerialPortInterface()
-        , m_inError(false)
-    {}
-
-    bool open(QIODevice::OpenMode, qint32) override
-    {
-        return true;
-    }
-
-    qint64 write(const QByteArray &data) override
-    {
-        m_writtenData += data;
-
-        return data.size();
-    }
-
-    QByteArray read(int, int) override // Not used in this test
-    {
-        throw QString("read should not be used in this test!!!");
-        return QByteArray();
-    }
-
-    QByteArray readAll() override
-    {
-        return m_readData;
-    }
-
-    bool inError() const override
-    {
-        return m_inError;
-    }
-
-    QString errorString() const override
-    {
-        return "An error!!! ohoh";
-    }
-
-    QByteArray writtenData() const
-    {
-        return m_writtenData;
-    }
-
-    void simulateReceivedData(QByteArray data)
-    {
-        m_readData = data;
-
-        emit dataAvailable();
-    }
-
-    void setInError(bool inError)
-    {
-        m_inError = inError;
-    }
-
-private:
-    bool m_inError;
-    QByteArray m_writtenData;
-    QByteArray m_readData;
-};
+#include "testcommon/testportdiscovery.h"
+#include "testcommon/testserialport.h"
 
 class MachineCommunicationTest : public QObject
 {
@@ -117,6 +28,11 @@ private Q_SLOTS:
     void ifPortIsInErrorAfterReadClosePortAndEmitSignal();
     void closePortWithError();
     void closePortWithoutError();
+    void emitSignalWhenPortIsGrabbedFromPortDiscovery();
+    void sendFeedHoldWhenAskedTo();
+    void sendResumeFeedHoldWhenAskedTo();
+    void sendSoftResetWhenAskedTo();
+    void doHardResetWhenAskedTo();
 };
 
 MachineCommunicationTest::MachineCommunicationTest()
@@ -128,7 +44,7 @@ void MachineCommunicationTest::grabPortFromPortDiscovererWhenMachineFoundIsCalle
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
 
-    MachineCommunication communicator;
+    MachineCommunication communicator(100);
 
     QSignalSpy spy(&portDiscoverer, &TestPortDiscovery::serialPortMoved);
 
@@ -139,7 +55,7 @@ void MachineCommunicationTest::grabPortFromPortDiscovererWhenMachineFoundIsCalle
 
 void MachineCommunicationTest::doNotWriteLineIfNoSerialPortIsPresent()
 {
-    MachineCommunication communicator;
+    MachineCommunication communicator(100);
 
     // This should simply not crash
     communicator.writeLine("some data to write");
@@ -150,7 +66,7 @@ void MachineCommunicationTest::writeDataToSerialPort()
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
 
-    MachineCommunication communicator;
+    MachineCommunication communicator(100);
 
     communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
     communicator.writeData("some data to write");
@@ -163,7 +79,7 @@ void MachineCommunicationTest::writeLineToSerialPort()
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
 
-    MachineCommunication communicator;
+    MachineCommunication communicator(100);
 
     communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
     communicator.writeLine("some data to write");
@@ -176,7 +92,7 @@ void MachineCommunicationTest::emitSignalWhenDataIsWritten()
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
 
-    MachineCommunication communicator;
+    MachineCommunication communicator(100);
 
     QSignalSpy spy(&communicator, &MachineCommunication::dataSent);
 
@@ -193,7 +109,7 @@ void MachineCommunicationTest::emitSignalWhenDataIsReceived()
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
 
-    MachineCommunication communicator;
+    MachineCommunication communicator(100);
 
     QSignalSpy spy(&communicator, &MachineCommunication::dataReceived);
 
@@ -211,7 +127,7 @@ void MachineCommunicationTest::ifPortIsInErrorAfterWriteClosePortAndEmitSignal()
     TestPortDiscovery portDiscoverer(serialPort);
     serialPort->setInError(true);
 
-    MachineCommunication communicator;
+    MachineCommunication communicator(100);
 
     QSignalSpy spyPortDeleted(serialPort, &QObject::destroyed);
     QSignalSpy spyPortClosed(&communicator, &MachineCommunication::portClosedWithError);
@@ -233,7 +149,7 @@ void MachineCommunicationTest::ifPortIsInErrorAfterReadClosePortAndEmitSignal()
     TestPortDiscovery portDiscoverer(serialPort);
     serialPort->setInError(true);
 
-    MachineCommunication communicator;
+    MachineCommunication communicator(100);
 
     QSignalSpy spyPortDeleted(serialPort, &QObject::destroyed);
     QSignalSpy spyPortClosed(&communicator, &MachineCommunication::portClosedWithError);
@@ -254,7 +170,7 @@ void MachineCommunicationTest::closePortWithError()
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
 
-    MachineCommunication communicator;
+    MachineCommunication communicator(100);
 
     QSignalSpy spyPortDeleted(serialPort, &QObject::destroyed);
     QSignalSpy spyPortClosed(&communicator, &MachineCommunication::portClosedWithError);
@@ -275,7 +191,7 @@ void MachineCommunicationTest::closePortWithoutError()
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
 
-    MachineCommunication communicator;
+    MachineCommunication communicator(100);
 
     QSignalSpy spyPortDeleted(serialPort, &QObject::destroyed);
     QSignalSpy spyPortClosed(&communicator, &MachineCommunication::portClosed);
@@ -287,6 +203,97 @@ void MachineCommunicationTest::closePortWithoutError()
     QCOMPARE(spyPortDeleted.count(), 1);
     QCOMPARE(spyPortClosed.count(), 1);
     QCOMPARE(spyDataSent.count(), 0);
+}
+
+void MachineCommunicationTest::emitSignalWhenPortIsGrabbedFromPortDiscovery()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator(100);
+
+    QSignalSpy spy(&communicator, &MachineCommunication::machineInitialized);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+
+    QCOMPARE(spy.count(), 1);
+}
+
+void MachineCommunicationTest::sendFeedHoldWhenAskedTo()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator(100);
+
+    QSignalSpy spy(&communicator, &MachineCommunication::dataSent);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.feedHold();
+
+    QCOMPARE(spy.count(), 1);
+    auto data = spy.at(0).at(0).toByteArray();
+    QCOMPARE(data, "!");
+}
+
+void MachineCommunicationTest::sendResumeFeedHoldWhenAskedTo()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator(100);
+
+    QSignalSpy spy(&communicator, &MachineCommunication::dataSent);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.resumeFeedHold();
+
+    QCOMPARE(spy.count(), 1);
+    auto data = spy.at(0).at(0).toByteArray();
+    QCOMPARE(data, "~");
+}
+
+void MachineCommunicationTest::sendSoftResetWhenAskedTo()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator(100);
+
+    QSignalSpy spy(&communicator, &MachineCommunication::dataSent);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.softReset();
+
+    QCOMPARE(spy.count(), 1);
+    auto data = spy.at(0).at(0).toByteArray();
+    QCOMPARE(data, "\x18");
+}
+
+void MachineCommunicationTest::doHardResetWhenAskedTo()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    QSignalSpy portOpenedSpy(serialPort, &TestSerialPort::portOpened);
+    QSignalSpy portClosedSpy(serialPort, &TestSerialPort::portClosed);
+
+    MachineCommunication communicator(2000);
+
+    QSignalSpy machineInitializedSpy(&communicator, &MachineCommunication::machineInitialized);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    QCOMPARE(machineInitializedSpy.count(), 1);
+
+    QElapsedTimer timer;
+    timer.start();
+    communicator.hardReset();
+    const auto elapsed = timer.elapsed();
+
+    QVERIFY(elapsed > 1950);
+    QCOMPARE(portOpenedSpy.count(), 1);
+    QCOMPARE(portClosedSpy.count(), 1);
+    QCOMPARE(machineInitializedSpy.count(), 2);
 }
 
 QTEST_GUILESS_MAIN(MachineCommunicationTest)

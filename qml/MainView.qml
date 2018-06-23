@@ -1,5 +1,6 @@
 import QtQuick 2.4
 import QtQuick.Controls 2.2
+import QtQuick.Dialogs 1.2
 import QtQuick.Layouts 1.3
 
 ColumnLayout {
@@ -7,6 +8,7 @@ ColumnLayout {
 
     signal shapeLibraryRequested
     signal startCuttingRequested
+    signal goToCuttingView
 
     function selectedItem() {
         return shapesView.selectedItem()
@@ -44,13 +46,6 @@ ColumnLayout {
             onClicked: root.shapeLibraryRequested()
         }
 
-        Button {
-            Layout.fillWidth: false
-            Layout.fillHeight: true
-            Layout.margins: 3
-            text: qsTr("Import")
-        }
-
         Item {
             Layout.fillWidth: true
         }
@@ -59,10 +54,47 @@ ColumnLayout {
             Layout.fillWidth: false
             Layout.fillHeight: true
             Layout.margins: 3
+            text: qsTr("Import && Cut")
+            enabled: controller.connected && !controller.streamingGCode
+            visible: !controller.streamingGCode
+
+            onClicked: fileDialog.open()
+        }
+
+        Button {
+            Layout.fillWidth: false
+            Layout.fillHeight: true
+            Layout.margins: 3
             text: qsTr("Start cutting")
-            enabled: controller.connected
+            enabled: false //controller.connected
+            visible: !controller.streamingGCode
 
             onClicked: root.startCuttingRequested()
+        }
+
+        Button {
+            Layout.fillWidth: false
+            Layout.fillHeight: true
+            Layout.margins: 3
+            text: qsTr("Current cut")
+            enabled: controller.streamingGCode
+            visible: controller.streamingGCode
+
+            onClicked: root.goToCuttingView()
+        }
+    }
+
+    FileDialog {
+        id: fileDialog
+        title: "Please choose a GCode file"
+        folder: shortcuts.home
+        selectMultiple: false
+        selectExisting: true
+        nameFilters: ["GCode files (*.gcode)", "All files (*)"]
+
+        onAccepted: {
+            controller.setGCodeFile(fileUrl)
+            root.startCuttingRequested()
         }
     }
 }

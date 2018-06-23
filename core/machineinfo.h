@@ -5,7 +5,8 @@
 #include <QString>
 
 class MachineInfo {
-    static bool r;
+private:
+    static const bool registered;
 
 public:
     static MachineInfo createFromString(QByteArray s);

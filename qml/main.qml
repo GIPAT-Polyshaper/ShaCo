@@ -17,6 +17,12 @@ Window {
     property string machineName: ""
     property string firmwareVersion: ""
 
+    onClosing:
+        if (controller.streamingGCode) {
+            close.accepted = false
+            confirmExit.open()
+        }
+
     Connections {
         target: controller
         onStartedPortDiscovery: {
@@ -33,12 +39,41 @@ Window {
             serialPortErrorDialog.errorReason = reason
             serialPortErrorDialog.open()
         }
+        onStreamingEndedWithError: {
+            streamErrorDialog.errorReason = reason
+            streamErrorDialog.open()
+        }
+    }
+
+    MessageDialog {
+         id: confirmExit
+         title: qsTr("Confirm exit")
+         text: qsTr("There is a works in progress. Interrupt and exit?")
+         icon: StandardIcon.Question
+         standardButtons: StandardButton.Yes | StandardButton.No
+         visible: false
+
+         onYes: {
+             controller.stopStreaminGCode()
+             Qt.quit()
+         }
     }
 
     MessageDialog {
          id: serialPortErrorDialog
          title: qsTr("Serial port communication error")
          text: qsTr("The serial port was closed due to an error. Reason: ") + errorReason
+         icon: StandardIcon.Critical
+         standardButtons: StandardButton.Ok
+         visible: false
+
+         property string errorReason: ""
+    }
+
+    MessageDialog {
+         id: streamErrorDialog
+         title: qsTr("GCode streaming error")
+         text: qsTr("GCode streaming failed with error. Reason: ") + errorReason
          icon: StandardIcon.Critical
          standardButtons: StandardButton.Ok
          visible: false
@@ -77,6 +112,20 @@ Window {
                     visible: false
                     text: (root.machineName == "") ? qsTr("Searching machine...") : qsTr(root.machineName + " [" + root.firmwareVersion +"]")
                 }
+            }
+
+            AnimatedImage {
+                id: streamingImage
+
+                height: 20
+                visible: controller.streamingGCode
+                playing: controller.streamingGCode
+                source: "qrc:/images/gears.gif"
+                fillMode: Image.PreserveAspectFit
+                horizontalAlignment: Image.AlignLeft
+                verticalAlignment: Image.AlignVCenter
+                anchors.left: logoImage.right
+                anchors.top: parent.top
             }
 
             Text {
@@ -148,6 +197,7 @@ Window {
         visible: false
         onShapeLibraryRequested: stack.push(shapeLibraryView)
         onStartCuttingRequested: stack.push(cutPreparationView)
+        onGoToCuttingView: stack.push(cutView)
 
         onVisibleChanged:
             if (visible) {
@@ -180,7 +230,7 @@ Window {
         visible: false
         onBack: stack.pop()
         onStartCutRequested: {
-            cutView.temperature = temperature
+            controller.startStreamingGCode()
             stack.push(cutView)
         }
 
@@ -200,9 +250,10 @@ Window {
         onVisibleChanged:
             if (visible) {
                 root.showSortControl = false
-                root.statusText = qsTr("Cutting...")
+                root.statusText = Qt.binding(function() {
+                    return controller.streamingGCode ? qsTr("Cutting...") : qsTr("Cut Completed")
+                })
                 cutView.itemToCut = mainView.selectedItem()
-                cutView.startTimer()
             }
     }
 

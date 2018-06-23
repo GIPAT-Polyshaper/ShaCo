@@ -102,7 +102,7 @@ private:
     MachineInfo getMachineInfo(SerialPortInterface* p)
     {
         QByteArray answer;
-        p->open(QIODevice::ReadWrite, QSerialPort::Baud115200);
+        p->open();
         p->write("$I\n");
 
         for (int i = 0; i < m_maxReadAttemptsPerPort && !answer.endsWith("ok\r\n"); ++i) {

@@ -3,14 +3,42 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 
 RowLayout {
-    property alias temperature: slider.value
+    id: root
 
-    Text {
+    ColumnLayout {
         Layout.fillHeight: true
         Layout.fillWidth: false
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        text: qsTr("Temperature: ")
+
+        Text {
+            Layout.fillHeight: false
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            text: qsTr("Temperature: ")
+        }
+
+        Button {
+            Layout.fillHeight: false
+            Layout.fillWidth: true
+            checkable: true
+            checked: controller.wireOn
+            text: currentText()
+            enabled: !controller.streamingGCode
+
+            function currentText()
+            {
+                if (checked) {
+                    return qsTr("Wire On")
+                } else {
+                    return qsTr("Wire Off")
+                }
+            }
+
+            onCheckedChanged: {
+                text = currentText()
+                controller.wireOn = checked;
+            }
+        }
     }
 
     Slider {
@@ -19,7 +47,7 @@ RowLayout {
         Layout.fillWidth: true
         from: 0
         to: 100
-        value: 50
+        value: controller.wireTemperature
 
         background: Rectangle {
             x: slider.leftPadding
@@ -56,5 +84,7 @@ RowLayout {
                 text: slider.value.toFixed(0) + "%"
             }
         }
+
+        onValueChanged: controller.wireTemperature = value
     }
 }

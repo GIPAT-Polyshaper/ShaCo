@@ -13,8 +13,12 @@ HEADERS += \
     portdiscovery.h \
     serialport.h \
     machineinfo.h \
-    machinecommunication.h
+    machinecommunication.h \
+    gcodesender.h \
+    wirecontroller.h
 SOURCES += \
     serialport.cpp \
     machineinfo.cpp \
-    machinecommunication.cpp
+    machinecommunication.cpp \
+    gcodesender.cpp \
+    wirecontroller.cpp
