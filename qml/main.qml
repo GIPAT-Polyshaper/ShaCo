@@ -35,14 +35,18 @@ Window {
             root.machineName = machineName
             root.firmwareVersion = firmwareVersion
         }
-        onPortClosedWithError: {
-            serialPortErrorDialog.errorReason = reason
-            serialPortErrorDialog.open()
-        }
-        onStreamingEndedWithError: {
-            streamErrorDialog.errorReason = reason
-            streamErrorDialog.open()
-        }
+        onPortClosedWithError:
+            if (!errorDialog.visible) {
+                errorDialog.title = qsTr("Serial port communication error")
+                errorDialog.text = qsTr("The serial port was closed due to an error. Reason: ") + reason
+                errorDialog.open()
+            }
+        onStreamingEndedWithError:
+            if (!errorDialog.visible) {
+                errorDialog.title = qsTr("GCode streaming error")
+                errorDialog.text = qsTr("GCode streaming failed with error. Reason: ") + reason
+                errorDialog.open()
+            }
     }
 
     MessageDialog {
@@ -60,25 +64,10 @@ Window {
     }
 
     MessageDialog {
-         id: serialPortErrorDialog
-         title: qsTr("Serial port communication error")
-         text: qsTr("The serial port was closed due to an error. Reason: ") + errorReason
+         id: errorDialog
          icon: StandardIcon.Critical
          standardButtons: StandardButton.Ok
          visible: false
-
-         property string errorReason: ""
-    }
-
-    MessageDialog {
-         id: streamErrorDialog
-         title: qsTr("GCode streaming error")
-         text: qsTr("GCode streaming failed with error. Reason: ") + errorReason
-         icon: StandardIcon.Critical
-         standardButtons: StandardButton.Ok
-         visible: false
-
-         property string errorReason: ""
     }
 
     ColumnLayout {
