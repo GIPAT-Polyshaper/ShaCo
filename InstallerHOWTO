@@ -1,0 +1,2 @@
+- To create 7zip data files to put in data use the command: '/opt/Qt/Tools/QtInstallerFramework/3.0/bin/archivegen shaco.7z ShaCo'
+- To create the installer use the command: '/opt/Qt/Tools/QtInstallerFramework/3.0/bin/binarycreator -c config/config.xml -p packages PolyShaper'
