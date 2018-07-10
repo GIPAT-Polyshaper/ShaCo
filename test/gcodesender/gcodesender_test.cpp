@@ -79,8 +79,6 @@ private Q_SLOTS:
     void sendStreamingEndSignalWithPortClosedReasonIfPortClosed();
     void sendStreamingEndSignalWithStreamInterruptedIfUserInterrupts();
     void sendStreamingEndSignalWithStreamErrorReasonIfFirmwareRepliesWithError();
-    void correctlyHandleReplyWhenSplittedInMultipleChunks();
-    void correctlyHandleMultipleRepliesAtOnce();
     void ignoreUnexpectedFirmwareResponses();
     void doNotSendMoreThan128BytesWithoutAReply();
     void doNotSendLineIfItWouldCauseMoreThan128BytesToBeSent();
@@ -415,83 +413,6 @@ void GCodeSenderTest::sendStreamingEndSignalWithStreamErrorReasonIfFirmwareRepli
     QCOMPARE(reason, GCodeSender::StreamEndReason::MachineErrorReply);
     QCOMPARE(description, tr("Firmware replied with error: ") + "10");
     QCOMPARE(deviceDeleted.count(), 1);
-}
-
-void GCodeSenderTest::correctlyHandleReplyWhenSplittedInMultipleChunks()
-{
-    auto communicatorAndPort = createCommunicator();
-    auto communicator = std::move(communicatorAndPort.first);
-    auto serialPort = communicatorAndPort.second;
-    WireController wireController(communicator.get());
-
-    auto bufferUptr = std::make_unique<TestBuffer>();
-    bufferUptr->buffer() = "G01 X100\nG01 Y1\nG00 Z9";
-    TestBuffer* const buffer = bufferUptr.get();
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(bufferUptr));
-
-    QSignalSpy deviceDeleted(buffer, &QIODevice::destroyed);
-
-    // This is used to schedule a function to be executed when the QT event loop is executed
-    // (interval is 0)
-    QTimer timer;
-    int count = 0;
-    connect(&timer, &QTimer::timeout, [serialPort, &count](){
-        // The second line causes and error and error message is received in two parts
-        if (count == 1) {
-            serialPort->simulateReceivedData("erro");
-        } else if (count == 2) {
-            serialPort->simulateReceivedData("r:10\r\n");
-        } else {
-            serialPort->simulateReceivedData("ok\r\n");
-        }
-        ++count;
-    });
-    timer.start();
-
-    QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
-
-    fileSender.streamData();
-
-    QCOMPARE(endSpy.count(), 1);
-    auto reason = endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>();
-    QCOMPARE(reason, GCodeSender::StreamEndReason::MachineErrorReply);
-    QCOMPARE(deviceDeleted.count(), 1);
-}
-
-void GCodeSenderTest::correctlyHandleMultipleRepliesAtOnce()
-{
-    auto communicatorAndPort = createCommunicator();
-    auto communicator = std::move(communicatorAndPort.first);
-    auto serialPort = communicatorAndPort.second;
-    WireController wireController(communicator.get());
-
-    auto buffer = std::make_unique<TestBuffer>();
-    buffer->buffer() = "G01 X100\nG01 Y1\nG00 Z9";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
-
-    // This is used to schedule a function to be executed when the QT event loop is executed
-    // (interval is 0)
-    QTimer timer;
-    int count = 0;
-    connect(&timer, &QTimer::timeout, [serialPort, &count](){
-        if (count == 0) {
-            serialPort->simulateReceivedData("o");
-        } else if (count == 1) {
-            serialPort->simulateReceivedData("k\r\nok\r\n");
-        } else if (count < 5) {
-            serialPort->simulateReceivedData("ok\r\n");
-        }
-        ++count;
-    });
-    timer.start();
-
-    QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
-
-    fileSender.streamData();
-
-    QCOMPARE(endSpy.count(), 1);
-    auto reason = endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>();
-    QCOMPARE(reason, GCodeSender::StreamEndReason::Completed);
 }
 
 void GCodeSenderTest::ignoreUnexpectedFirmwareResponses()

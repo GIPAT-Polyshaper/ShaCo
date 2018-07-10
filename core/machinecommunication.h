@@ -8,8 +8,6 @@
 #include "machineinfo.h"
 #include "serialport.h"
 
-// TODO-TOMMY It might be useful to add a function to obtain the machien status (? real time command). It
-// contains also the temperature override, in case we want to make it more "closed-loop"
 class MachineCommunication : public QObject
 {
     Q_OBJECT

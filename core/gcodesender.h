@@ -44,11 +44,10 @@ signals:
 private slots:
     void portClosedWithError();
     void portClosed();
-    void dataReceived(QByteArray data);
+    void messageReceived(QByteArray message);
 
 private:
     void closeStream(GCodeSender::StreamEndReason reason, QString description);
-    int findEndCommandInPartialReply() const;
     int bytesSentSinceLastAck() const;
     void waitWhileBufferFull(int requiredSpace);
     void emitStreamingEnded();
@@ -56,7 +55,6 @@ private:
     MachineCommunication* const m_communicator;
     WireController* const m_wireController;
     std::unique_ptr<QIODevice> m_device; // Non const to be reset when streaming ends
-    QString m_partialReply;
     QQueue<int> m_sentBytes;
     GCodeSender::StreamEndReason m_streamEndReason;
     QString m_streamEndDescription;

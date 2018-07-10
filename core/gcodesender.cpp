@@ -37,7 +37,7 @@ GCodeSender::GCodeSender(MachineCommunication* communicator, WireController* wir
 
     connect(m_communicator, &MachineCommunication::portClosedWithError, this, &GCodeSender::portClosedWithError);
     connect(m_communicator, &MachineCommunication::portClosed, this, &GCodeSender::portClosed);
-    connect(m_communicator, &MachineCommunication::dataReceived, this, &GCodeSender::dataReceived);
+    connect(m_communicator, &MachineCommunication::messageReceived, this, &GCodeSender::messageReceived);
 }
 
 void GCodeSender::streamData()
@@ -122,27 +122,17 @@ void GCodeSender::portClosed()
     closeStream(StreamEndReason::PortClosed, tr("Serial port closed"));
 }
 
-void GCodeSender::dataReceived(QByteArray data)
+void GCodeSender::messageReceived(QByteArray message)
 {
-    m_partialReply += data;
-
-    auto endCommand = findEndCommandInPartialReply();
-    while (endCommand != -1) {
-        const auto& reply = m_partialReply.left(endCommand);
-        m_partialReply = m_partialReply.mid(endCommand + 2);
-
-        if (okRegExpr.match(reply).hasMatch()) {
-            if (!m_sentBytes.isEmpty()) {
-                m_sentBytes.dequeue();
-            }
-        } else {
-            auto match = errorRegExpr.match(reply);
-            if (match.hasMatch()) {
-                closeStream(StreamEndReason::MachineErrorReply, tr("Firmware replied with error: ") + match.captured(1));
-            }
+    if (okRegExpr.match(message).hasMatch()) {
+        if (!m_sentBytes.isEmpty()) {
+            m_sentBytes.dequeue();
         }
-
-        endCommand = findEndCommandInPartialReply();
+    } else {
+        auto match = errorRegExpr.match(message);
+        if (match.hasMatch()) {
+            closeStream(StreamEndReason::MachineErrorReply, tr("Firmware replied with error: ") + match.captured(1));
+        }
     }
 }
 
@@ -162,11 +152,6 @@ void GCodeSender::closeStream(GCodeSender::StreamEndReason reason, QString descr
     m_device.reset();
     m_streamEndReason = reason;
     m_streamEndDescription = description;
-}
-
-int GCodeSender::findEndCommandInPartialReply() const
-{
-    return m_partialReply.indexOf("\r\n");
 }
 
 int GCodeSender::bytesSentSinceLastAck() const
