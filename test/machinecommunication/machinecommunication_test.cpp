@@ -33,6 +33,12 @@ private Q_SLOTS:
     void sendResumeFeedHoldWhenAskedTo();
     void sendSoftResetWhenAskedTo();
     void doHardResetWhenAskedTo();
+    void emitCommandReceivedWhenACommandIsReceived();
+    void doNotEmitCommandReceivedIfDataHasNotEndline();
+    void sendCompleteCommandWhenReceivedInMultipleParts();
+    void sendCompletedCommandsIfEndlineInTheMiddleOfData();
+    void keepDataAfterEndlineForNextMessage();
+    void sendAllMessagesWhenMultipleAreReceivedWithTheSameCommand();
 };
 
 MachineCommunicationTest::MachineCommunicationTest()
@@ -294,6 +300,179 @@ void MachineCommunicationTest::doHardResetWhenAskedTo()
     QCOMPARE(portOpenedSpy.count(), 1);
     QCOMPARE(portClosedSpy.count(), 1);
     QCOMPARE(machineInitializedSpy.count(), 2);
+}
+
+void MachineCommunicationTest::emitCommandReceivedWhenACommandIsReceived()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator(100);
+
+    QSignalSpy spy(&communicator, &MachineCommunication::messageReceived);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    serialPort->simulateReceivedData("Toc toc...\r\n");
+
+    QCOMPARE(spy.count(), 1);
+    auto data = spy.at(0).at(0).toByteArray();
+    QCOMPARE(data, "Toc toc...");
+}
+
+void MachineCommunicationTest::doNotEmitCommandReceivedIfDataHasNotEndline()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator(100);
+
+    QSignalSpy spy(&communicator, &MachineCommunication::messageReceived);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    serialPort->simulateReceivedData("Toc toc...");
+
+    // message not received
+    QCOMPARE(spy.count(), 0);
+}
+
+void MachineCommunicationTest::sendCompleteCommandWhenReceivedInMultipleParts()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator(100);
+
+    QSignalSpy spy(&communicator, &MachineCommunication::messageReceived);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+
+    // This is used to schedule a function to be executed when the QT event loop is executed
+    // (interval is 0)
+    QTimer timer;
+    int count = 0;
+    connect(&timer, &QTimer::timeout, [serialPort, &count](){
+        if (count == 0) {
+            serialPort->simulateReceivedData("Toc to");
+        } else if (count == 1) {
+            serialPort->simulateReceivedData("c...\r\n");
+        }
+        ++count;
+    });
+    timer.start();
+
+    QVERIFY(spy.wait(1000));
+    QCOMPARE(spy.count(), 1);
+    auto data = spy.at(0).at(0).toByteArray();
+    QCOMPARE(data, "Toc toc...");
+}
+
+void MachineCommunicationTest::sendCompletedCommandsIfEndlineInTheMiddleOfData()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator(100);
+
+    QSignalSpy spy(&communicator, &MachineCommunication::messageReceived);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+
+    // This is used to schedule a function to be executed when the QT event loop is executed
+    // (interval is 0)
+    QTimer timer;
+    int count = 0;
+    connect(&timer, &QTimer::timeout, [serialPort, &count](){
+        if (count == 0) {
+            serialPort->simulateReceivedData("Toc to");
+        } else if (count == 1) {
+            serialPort->simulateReceivedData("c...\r\nAndRust");
+        }
+        ++count;
+    });
+    timer.start();
+
+    QVERIFY(spy.wait(1000));
+    QCOMPARE(spy.count(), 1);
+    auto data = spy.at(0).at(0).toByteArray();
+    QCOMPARE(data, "Toc toc...");
+}
+
+void MachineCommunicationTest::keepDataAfterEndlineForNextMessage()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator(100);
+
+    QSignalSpy spy(&communicator, &MachineCommunication::messageReceived);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+
+    // This is used to schedule a function to be executed when the QT event loop is executed
+    // (interval is 0)
+    QTimer timer;
+    int count = 0;
+    connect(&timer, &QTimer::timeout, [serialPort, &count](){
+        if (count == 0) {
+            serialPort->simulateReceivedData("Toc to");
+        } else if (count == 1) {
+            serialPort->simulateReceivedData("c...\r\nAnd T");
+        } else if (count == 2) {
+            serialPort->simulateReceivedData("hen!\r\n");
+        }
+        ++count;
+    });
+    timer.start();
+
+    QVERIFY(spy.wait(1000));
+    QCOMPARE(spy.count(), 1);
+    auto data1 = spy.at(0).at(0).toByteArray();
+    QCOMPARE(data1, "Toc toc...");
+
+    QVERIFY(spy.wait(1000));
+    QCOMPARE(spy.count(), 2);
+    auto data2 = spy.at(1).at(0).toByteArray();
+    QCOMPARE(data2, "And Then!");
+}
+
+void MachineCommunicationTest::sendAllMessagesWhenMultipleAreReceivedWithTheSameCommand()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator(100);
+
+    QSignalSpy spy(&communicator, &MachineCommunication::messageReceived);
+
+    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+
+    // This is used to schedule a function to be executed when the QT event loop is executed
+    // (interval is 0)
+    QTimer timer;
+    int count = 0;
+    connect(&timer, &QTimer::timeout, [serialPort, &count](){
+        if (count == 0) {
+            serialPort->simulateReceivedData("Toc to");
+        } else if (count == 1) {
+            serialPort->simulateReceivedData("c...\r\nAnd Then\r\nAn");
+        } else if (count == 2) {
+            serialPort->simulateReceivedData("other\r\n");
+        }
+        ++count;
+    });
+    timer.start();
+
+    QVERIFY(spy.wait(1000));
+    QCOMPARE(spy.count(), 2);
+    auto data1 = spy.at(0).at(0).toByteArray();
+    QCOMPARE(data1, "Toc toc...");
+    auto data2 = spy.at(1).at(0).toByteArray();
+    QCOMPARE(data2, "And Then");
+
+    QVERIFY(spy.wait(1000));
+    QCOMPARE(spy.count(), 3);
+    auto data3 = spy.at(2).at(0).toByteArray();
+    QCOMPARE(data3, "Another");
 }
 
 QTEST_GUILESS_MAIN(MachineCommunicationTest)
