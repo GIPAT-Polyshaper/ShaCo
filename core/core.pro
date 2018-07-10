@@ -16,11 +16,13 @@ HEADERS += \
     machinecommunication.h \
     gcodesender.h \
     wirecontroller.h \
-    machinestate.h
+    machinestate.h \
+    machinestatusmonitor.h
 SOURCES += \
     serialport.cpp \
     machineinfo.cpp \
     machinecommunication.cpp \
     gcodesender.cpp \
     wirecontroller.cpp \
-    machinestate.cpp
+    machinestate.cpp \
+    machinestatusmonitor.cpp

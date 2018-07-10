@@ -2,6 +2,7 @@
 #define MACHINESTATE_H
 
 #include <QByteArray>
+#include <QMetaType>
 #include <QString>
 
 enum class MachineState {
@@ -16,6 +17,7 @@ enum class MachineState {
     Sleep,
     Unknown
 };
+Q_DECLARE_METATYPE(MachineState)
 
 MachineState string2MachineState(const QByteArray& value);
 QString machineState2String(MachineState state);

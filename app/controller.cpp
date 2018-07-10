@@ -9,6 +9,7 @@ Controller::Controller(QObject *parent)
     , m_portDiscoverer(new PortDiscovery<QSerialPortInfo>(QSerialPortInfo::availablePorts, [](QSerialPortInfo p){ return std::make_unique<SerialPort>(p); }, 100, 100))
     , m_machineCommunicator(new MachineCommunication())
     , m_wireController(new WireController(m_machineCommunicator))
+    , m_statusMonitor(new MachineStatusMonitor(1000, m_machineCommunicator)) // polling every second
     , m_gcodeSender(nullptr)
     , m_connected(false)
     , m_streamingGCode(false)
@@ -18,6 +19,7 @@ Controller::Controller(QObject *parent)
     moveToPortThread(m_portDiscoverer);
     moveToPortThread(m_machineCommunicator);
     moveToPortThread(m_wireController);
+    moveToPortThread(m_statusMonitor);
 
     connect(m_portDiscoverer, &PortDiscovery<QSerialPortInfo>::startedDiscoveringPort, this, &Controller::startedPortDiscovery);
     connect(m_portDiscoverer, &PortDiscovery<QSerialPortInfo>::portFound, this, &Controller::signalPortFound);

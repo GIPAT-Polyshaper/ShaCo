@@ -7,8 +7,8 @@
 
 namespace {
     constexpr int grblBufferSize = 128;
-    const QRegularExpression okRegExpr("ok", QRegularExpression::OptimizeOnFirstUsageOption);
-    const QRegularExpression errorRegExpr("error:([0-9]+)", QRegularExpression::OptimizeOnFirstUsageOption);
+    const QRegularExpression okRegExpr("^ok$", QRegularExpression::OptimizeOnFirstUsageOption);
+    const QRegularExpression errorRegExpr("^error:([0-9]+)$", QRegularExpression::OptimizeOnFirstUsageOption);
 
     bool registerStreamEndReason()
     {

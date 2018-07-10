@@ -8,6 +8,8 @@
 //      or gcodesender. For the moment we ignore this, our g-codes should not have set-temperature
 //      instructions and terminal is not meant to be used by normal users. To make things clear:
 //      this works as long as no temperature command is issued outside this class.
+// NOTE now that we have a class polling for machine status, we might close the loop reading the
+//      base and overridden temperatura from there (leave for later)
 class WireController : public QObject
 {
     Q_OBJECT

@@ -6,7 +6,8 @@ SUBDIRS = \
     gcodesender \
     testcommon \
     wirecontroller \
-    machinestate
+    machinestate \
+    machinestatusmonitor
 
 portdiscovery.depends = testcommon
 machineinfo.depends = testcommon

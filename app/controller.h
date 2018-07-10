@@ -8,6 +8,7 @@
 #include "core/gcodesender.h"
 #include "core/machinecommunication.h"
 #include "core/machineinfo.h"
+#include "core/machinestatusmonitor.h"
 #include "core/portdiscovery.h"
 #include "core/wirecontroller.h"
 
@@ -74,6 +75,7 @@ private:
     PortDiscovery<QSerialPortInfo>* const m_portDiscoverer;
     MachineCommunication* const m_machineCommunicator;
     WireController* const m_wireController;
+    MachineStatusMonitor* const m_statusMonitor;
     GCodeSender* m_gcodeSender;
     bool m_connected;
     bool m_streamingGCode;
