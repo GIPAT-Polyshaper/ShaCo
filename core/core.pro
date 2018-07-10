@@ -15,10 +15,12 @@ HEADERS += \
     machineinfo.h \
     machinecommunication.h \
     gcodesender.h \
-    wirecontroller.h
+    wirecontroller.h \
+    machinestate.h
 SOURCES += \
     serialport.cpp \
     machineinfo.cpp \
     machinecommunication.cpp \
     gcodesender.cpp \
-    wirecontroller.cpp
+    wirecontroller.cpp \
+    machinestate.cpp
