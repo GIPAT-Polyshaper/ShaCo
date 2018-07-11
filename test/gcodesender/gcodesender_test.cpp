@@ -4,10 +4,12 @@
 #include <QBuffer>
 #include <QByteArray>
 #include <QSignalSpy>
+#include <QTime>
 #include <QTimer>
 #include <QtTest>
 #include "core/gcodesender.h"
 #include "core/machinecommunication.h"
+#include "core/machinestatusmonitor.h"
 #include "core/wirecontroller.h"
 #include "testcommon/testportdiscovery.h"
 #include "testcommon/testserialport.h"
@@ -68,6 +70,8 @@ private:
     void sendAcks(QTimer& timer, TestSerialPort* serialPort, int numAcks);
 
 private Q_SLOTS:
+    // TODO-TOMMY Tests here are too complex and fragile, we should perhaps refactor this class to
+    // simplify its implementation (among other things, try to remove sleeps)
     void setGCodeStreamParentToNull();
     void sendSignalWhenStreamingStartsAndEnds();
     void deleteDeviceWhenStreamingEnds();
@@ -79,8 +83,6 @@ private Q_SLOTS:
     void sendStreamingEndSignalWithPortClosedReasonIfPortClosed();
     void sendStreamingEndSignalWithStreamInterruptedIfUserInterrupts();
     void sendStreamingEndSignalWithStreamErrorReasonIfFirmwareRepliesWithError();
-    void correctlyHandleReplyWhenSplittedInMultipleChunks();
-    void correctlyHandleMultipleRepliesAtOnce();
     void ignoreUnexpectedFirmwareResponses();
     void doNotSendMoreThan128BytesWithoutAReply();
     void doNotSendLineIfItWouldCauseMoreThan128BytesToBeSent();
@@ -91,6 +93,9 @@ private Q_SLOTS:
     void sendHardResetWhenStreamErrorOccurs();
     void sendHardResetWhenMachineRepliesWithError();
     void sendStreamingEndSignalAtStartIfErrorOccursBeforeStart();
+    void endStreamingWithErrorIfInUnexpectedStatus();
+    void waitSomeTimeAtTheEndBeforeCheckingMachineIsIdle();
+    void waitSomeTimeAtStartAfterHardReset();
 };
 
 GCodeSenderTest::GCodeSenderTest()
@@ -99,10 +104,12 @@ GCodeSenderTest::GCodeSenderTest()
 
 void GCodeSenderTest::sendAcks(QTimer& timer, TestSerialPort* serialPort, int numAcks)
 {
-    int ackCount = 0;
+    int ackCount = -1; // -1 to take into account the processing of events right after the hard reset
     connect(&timer, &QTimer::timeout, [serialPort, &ackCount, numAcks](){
-        if (ackCount < numAcks) {
+        if (ackCount >= 0 && ackCount < numAcks) {
             serialPort->simulateReceivedData("ok\r\n");
+        } else if (ackCount == numAcks) {
+            serialPort->simulateReceivedData("<Idle|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n\r\n");
         }
         ++ackCount;
     });
@@ -114,12 +121,13 @@ void GCodeSenderTest::setGCodeStreamParentToNull()
     auto communicatorAndPort = createCommunicator();
     auto communicator = std::move(communicatorAndPort.first);
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto bufferUptr = std::make_unique<TestBuffer>();
     bufferUptr->setParent(this);
     bufferUptr->buffer() = "G01 X100\n";
     TestBuffer* const buffer = bufferUptr.get();
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(bufferUptr));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(bufferUptr));
 
     QCOMPARE(buffer->parent(), nullptr);
 }
@@ -130,10 +138,12 @@ void GCodeSenderTest::sendSignalWhenStreamingStartsAndEnds()
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    // Very high polling delay to avoid having to check ? is sent, se simply send status when needed
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto buffer = std::make_unique<TestBuffer>();
     buffer->buffer() = "G01 X100\n";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
     QSignalSpy startSpy(&fileSender, &GCodeSender::streamingStarted);
@@ -143,13 +153,22 @@ void GCodeSenderTest::sendSignalWhenStreamingStartsAndEnds()
     // (interval is 0).
     QTimer timer;
     int ackCount = -1;
-    connect(&timer, &QTimer::timeout, [serialPort, &endSpy, &ackCount](){
+    QTime chrono;
+    bool machineStatusSent = false;
+    connect(&timer, &QTimer::timeout, [serialPort, &endSpy, &ackCount, &chrono, &machineStatusSent](){
         QCOMPARE(endSpy.count(), 0);
         if (ackCount == -1) {
             // This is sent by Grbl upon reset
             serialPort->simulateReceivedData("Grbl 1.1f ['$' for help]\r\n");
         } else if (ackCount < 3) {
             serialPort->simulateReceivedData("ok\r\n");
+            chrono.start();
+        } else if (!machineStatusSent) {
+            // wait some time before signalling the machine has gone idle
+            if (chrono.elapsed() > 1000) {
+                serialPort->simulateReceivedData("<Idle|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
+                machineStatusSent = true;
+            }
         }
         ++ackCount;
     });
@@ -157,10 +176,11 @@ void GCodeSenderTest::sendSignalWhenStreamingStartsAndEnds()
 
     fileSender.streamData();
 
-    QCOMPARE(dataSentSpy.count(), 5); // First 2 are M5 and S30 sent by wireController on hardReset
-    QCOMPARE(dataSentSpy.at(2).at(0).toByteArray(), "M3\n");
-    QCOMPARE(dataSentSpy.at(3).at(0).toByteArray(), "G01 X100\n");
-    QCOMPARE(dataSentSpy.at(4).at(0).toByteArray(), "M5\n");
+    QVERIFY(machineStatusSent);
+    QCOMPARE(dataSentSpy.count(), 6); // First 3 are ?, M5 and S30 sent by statuMonitor and wireController on hardReset
+    QCOMPARE(dataSentSpy.at(3).at(0).toByteArray(), "M3\n");
+    QCOMPARE(dataSentSpy.at(4).at(0).toByteArray(), "G01 X100\n");
+    QCOMPARE(dataSentSpy.at(5).at(0).toByteArray(), "M5\n");
     QCOMPARE(startSpy.count(), 1);
     QCOMPARE(endSpy.count(), 1);
     auto reason = endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>();
@@ -175,11 +195,12 @@ void GCodeSenderTest::deleteDeviceWhenStreamingEnds()
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto bufferUptr = std::make_unique<TestBuffer>();
     bufferUptr->buffer() = "G01 X100\n";
     TestBuffer* const buffer = bufferUptr.get();
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(bufferUptr));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(bufferUptr));
 
     QSignalSpy deviceDeleted(buffer, &QIODevice::destroyed);
 
@@ -199,11 +220,12 @@ void GCodeSenderTest::sendStreamingEndSignalWithPortErrorReasonInCaseOfError()
     auto communicator = std::move(communicatorAndPort.first);
     communicatorAndPort.second->setInError(true);
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto bufferUptr = std::make_unique<TestBuffer>();
     bufferUptr->buffer() = "G01 X100\n";
     TestBuffer* const buffer = bufferUptr.get();
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(bufferUptr));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(bufferUptr));
 
     QSignalSpy deviceDeleted(buffer, &QIODevice::destroyed);
 
@@ -223,12 +245,13 @@ void GCodeSenderTest::sendStreamingEndSignalWithStreamErrorReasonIfInputStreamCa
 {
     auto communicator = createCommunicator().first;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto bufferUptr = std::make_unique<TestBuffer>();
     bufferUptr->setOpenError(true);
     bufferUptr->buffer() = "G01 X100\n";
     TestBuffer* const buffer = bufferUptr.get();
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(bufferUptr));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(bufferUptr));
 
     QSignalSpy deviceDeleted(buffer, &QIODevice::destroyed);
 
@@ -248,12 +271,13 @@ void GCodeSenderTest::sendStreamingEndSignalWithStreamErrorReasonIfInputStreamCa
 {
     auto communicator = createCommunicator().first;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto bufferUptr = std::make_unique<TestBuffer>();
     bufferUptr->setReadError(true);
     bufferUptr->buffer() = "G01 X100\n";
     TestBuffer* const buffer = bufferUptr.get();
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(bufferUptr));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(bufferUptr));
 
     QSignalSpy deviceDeleted(buffer, &QIODevice::destroyed);
 
@@ -275,12 +299,13 @@ void GCodeSenderTest::addEndlineToStreamedDataIfMissing()
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
 
     auto buffer = std::make_unique<TestBuffer>();
     buffer->buffer() = "G01 X100";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
 
     // This is used to schedule a function to be executed when the QT event loop is executed
     // (interval is 0).
@@ -289,8 +314,8 @@ void GCodeSenderTest::addEndlineToStreamedDataIfMissing()
 
     fileSender.streamData();
 
-    QCOMPARE(spy.count(), 5); // First 2 are M5 and S30 sent by wireController on hardReset
-    auto data = spy.at(3).at(0).toByteArray();
+    QCOMPARE(spy.count(), 6); // First 3 are ?, M5 and S30 sent by statusMonitor and wireController on hardReset
+    auto data = spy.at(4).at(0).toByteArray();
     QCOMPARE(data, "G01 X100\n");
 }
 
@@ -300,12 +325,13 @@ void GCodeSenderTest::sendMultipleLines()
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
 
     auto buffer = std::make_unique<TestBuffer>();
     buffer->buffer() = "G01 X100\nG01 Y1\nG00 Z9";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
 
     QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
 
@@ -316,10 +342,10 @@ void GCodeSenderTest::sendMultipleLines()
 
     fileSender.streamData();
 
-    QCOMPARE(spy.count(), 7); // 3 + 4 (2 sent by wireController on hardReset plus wire on and off)
-    QCOMPARE(spy.at(3).at(0).toByteArray(), "G01 X100\n");
-    QCOMPARE(spy.at(4).at(0).toByteArray(), "G01 Y1\n");
-    QCOMPARE(spy.at(5).at(0).toByteArray(), "G00 Z9\n");
+    QCOMPARE(spy.count(), 8); // 3 + 5 (1 ? plus 2 sent by wireController on hardReset plus wire on and off)
+    QCOMPARE(spy.at(4).at(0).toByteArray(), "G01 X100\n");
+    QCOMPARE(spy.at(5).at(0).toByteArray(), "G01 Y1\n");
+    QCOMPARE(spy.at(6).at(0).toByteArray(), "G00 Z9\n");
     QCOMPARE(endSpy.count(), 1);
     auto reason = endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>();
     QCOMPARE(reason, GCodeSender::StreamEndReason::Completed);
@@ -329,6 +355,7 @@ void GCodeSenderTest::sendStreamingEndSignalWithPortClosedReasonIfPortClosed()
 {
     auto communicator = createCommunicator().first;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     // This is used to schedule a function to be executed when the QT event loop is executed
     // (interval is 0)
@@ -339,7 +366,7 @@ void GCodeSenderTest::sendStreamingEndSignalWithPortClosedReasonIfPortClosed()
     auto bufferUptr = std::make_unique<TestBuffer>();
     bufferUptr->buffer() = "G01 X100\nG01 Y1\nG00 Z9";
     TestBuffer* const buffer = bufferUptr.get();
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(bufferUptr));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(bufferUptr));
 
     QSignalSpy deviceDeleted(buffer, &QIODevice::destroyed);
 
@@ -359,11 +386,12 @@ void GCodeSenderTest::sendStreamingEndSignalWithStreamInterruptedIfUserInterrupt
 {
     auto communicator = createCommunicator().first;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto bufferUptr = std::make_unique<TestBuffer>();
     bufferUptr->buffer() = "G01 X100\nG01 Y1\nG00 Z9";
     TestBuffer* const buffer = bufferUptr.get();
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(bufferUptr));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(bufferUptr));
 
     QSignalSpy deviceDeleted(buffer, &QIODevice::destroyed);
 
@@ -391,11 +419,12 @@ void GCodeSenderTest::sendStreamingEndSignalWithStreamErrorReasonIfFirmwareRepli
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto bufferUptr = std::make_unique<TestBuffer>();
     bufferUptr->buffer() = "G01 X100\nG01 Y1\nG00 Z9";
     TestBuffer* const buffer = bufferUptr.get();
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(bufferUptr));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(bufferUptr));
 
     QSignalSpy deviceDeleted(buffer, &QIODevice::destroyed);
 
@@ -417,105 +446,35 @@ void GCodeSenderTest::sendStreamingEndSignalWithStreamErrorReasonIfFirmwareRepli
     QCOMPARE(deviceDeleted.count(), 1);
 }
 
-void GCodeSenderTest::correctlyHandleReplyWhenSplittedInMultipleChunks()
-{
-    auto communicatorAndPort = createCommunicator();
-    auto communicator = std::move(communicatorAndPort.first);
-    auto serialPort = communicatorAndPort.second;
-    WireController wireController(communicator.get());
-
-    auto bufferUptr = std::make_unique<TestBuffer>();
-    bufferUptr->buffer() = "G01 X100\nG01 Y1\nG00 Z9";
-    TestBuffer* const buffer = bufferUptr.get();
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(bufferUptr));
-
-    QSignalSpy deviceDeleted(buffer, &QIODevice::destroyed);
-
-    // This is used to schedule a function to be executed when the QT event loop is executed
-    // (interval is 0)
-    QTimer timer;
-    int count = 0;
-    connect(&timer, &QTimer::timeout, [serialPort, &count](){
-        // The second line causes and error and error message is received in two parts
-        if (count == 1) {
-            serialPort->simulateReceivedData("erro");
-        } else if (count == 2) {
-            serialPort->simulateReceivedData("r:10\r\n");
-        } else {
-            serialPort->simulateReceivedData("ok\r\n");
-        }
-        ++count;
-    });
-    timer.start();
-
-    QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
-
-    fileSender.streamData();
-
-    QCOMPARE(endSpy.count(), 1);
-    auto reason = endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>();
-    QCOMPARE(reason, GCodeSender::StreamEndReason::MachineErrorReply);
-    QCOMPARE(deviceDeleted.count(), 1);
-}
-
-void GCodeSenderTest::correctlyHandleMultipleRepliesAtOnce()
-{
-    auto communicatorAndPort = createCommunicator();
-    auto communicator = std::move(communicatorAndPort.first);
-    auto serialPort = communicatorAndPort.second;
-    WireController wireController(communicator.get());
-
-    auto buffer = std::make_unique<TestBuffer>();
-    buffer->buffer() = "G01 X100\nG01 Y1\nG00 Z9";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
-
-    // This is used to schedule a function to be executed when the QT event loop is executed
-    // (interval is 0)
-    QTimer timer;
-    int count = 0;
-    connect(&timer, &QTimer::timeout, [serialPort, &count](){
-        if (count == 0) {
-            serialPort->simulateReceivedData("o");
-        } else if (count == 1) {
-            serialPort->simulateReceivedData("k\r\nok\r\n");
-        } else if (count < 5) {
-            serialPort->simulateReceivedData("ok\r\n");
-        }
-        ++count;
-    });
-    timer.start();
-
-    QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
-
-    fileSender.streamData();
-
-    QCOMPARE(endSpy.count(), 1);
-    auto reason = endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>();
-    QCOMPARE(reason, GCodeSender::StreamEndReason::Completed);
-}
-
 void GCodeSenderTest::ignoreUnexpectedFirmwareResponses()
 {
     auto communicatorAndPort = createCommunicator();
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto buffer = std::make_unique<TestBuffer>();
     buffer->buffer() = "G01 X100\nG01 Y1\nG00 Z9";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
 
     // This is used to schedule a function to be executed when the QT event loop is executed
     // (interval is 0)
     QTimer timer;
     int count = 0;
-    int okSent = 0;
-    connect(&timer, &QTimer::timeout, [serialPort, &count, &okSent](){
+    int okSent = -1; // -1 to take into account the message processing ritgh after the hard reset
+    bool idleSent = false;
+    connect(&timer, &QTimer::timeout, [serialPort, &count, &okSent, &idleSent](){
         if (count == 1) {
             serialPort->simulateReceivedData("unexpected\r\n");
         } else if (okSent < 5) {
-            serialPort->simulateReceivedData("ok\r\n");
+            if (okSent >= 0) {
+                serialPort->simulateReceivedData("ok\r\n");
+            }
             ++okSent;
+        } else if (!idleSent) {
+            serialPort->simulateReceivedData("<Idle|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
+            idleSent = true;
         }
         ++count;
     });
@@ -543,7 +502,8 @@ public:
         , m_pauseCyclesAtLimitByte(0)
         , m_expectStartAgainSendingData(false)
         , m_startedAgainSendingData(true)
-        , m_acksToSend(-2) // Compensates for M5 and S30 sent by WireController on hardReset
+        , m_acksToSend(-2) // Compensates for M5 and S30 sent by wireController on hardReset
+        , m_machineGoesIdle(false)
     {
         connect(communicator, &MachineCommunication::dataSent, this, &GrblBufferLimitTestHelper::dataSent);
         connect(&m_timer, &QTimer::timeout, this, &GrblBufferLimitTestHelper::timeout);
@@ -563,10 +523,23 @@ public:
 public slots:
     void dataSent(QByteArray data)
     {
+        // The immediate command does not count for acks
+        if (data == "?") {
+            return;
+        }
+
         if (m_acksToSend >= 0) {
             m_bytesSent += data.size();
         }
         ++m_acksToSend;
+
+        // Stream always starts with M3 and ends with M5, when we get it, we can set status to Idle.
+        // The check on M3 is needed because another M5 is sent by wireController after hard reset
+        if (data == "M3\n") {
+            m_machineGoesIdle = false;
+        } else if (data == "M5\n") {
+            m_machineGoesIdle = true;
+        }
     }
 
     void timeout()
@@ -593,6 +566,8 @@ public slots:
             if (m_acksToSend > 0) {
                 m_serialPort->simulateReceivedData("ok\r\n");
                 --m_acksToSend;
+            } else if (m_machineGoesIdle) {
+                m_serialPort->simulateReceivedData("<Idle|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
             }
             m_expectStartAgainSendingData = true;
         }
@@ -611,6 +586,7 @@ private:
     bool m_expectStartAgainSendingData;
     bool m_startedAgainSendingData;
     int m_acksToSend;
+    bool m_machineGoesIdle;
 };
 
 void GCodeSenderTest::doNotSendMoreThan128BytesWithoutAReply()
@@ -619,6 +595,7 @@ void GCodeSenderTest::doNotSendMoreThan128BytesWithoutAReply()
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto buffer = std::make_unique<TestBuffer>();
     // 3 bytes (wire on) + 13 bytes + 14 times 8 bytes = 128 bytes. Then 3 more
@@ -627,7 +604,7 @@ void GCodeSenderTest::doNotSendMoreThan128BytesWithoutAReply()
     for (auto i = 0; i < 17; ++i) {
         buffer->buffer() += "G01 X10\n";
     }
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
 
     GrblBufferLimitTestHelper testHelper(128, communicator.get(), serialPort, &fileSender);
 
@@ -643,6 +620,7 @@ void GCodeSenderTest::doNotSendLineIfItWouldCauseMoreThan128BytesToBeSent()
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto buffer = std::make_unique<TestBuffer>();
     // 3 bytes (wire on) + 15 times 8 bytes = 123 bytes
@@ -653,7 +631,7 @@ void GCodeSenderTest::doNotSendLineIfItWouldCauseMoreThan128BytesToBeSent()
     buffer->buffer() += "G01\n";
     // Next line would cause the 128 bytes limit to be crossed, should wait before sending
     buffer->buffer() += "G01 X10\n";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
 
     GrblBufferLimitTestHelper testHelper(127, communicator.get(), serialPort, &fileSender);
 
@@ -669,6 +647,7 @@ void GCodeSenderTest::doNotSendWireOffIfItWouldCauseMoreThan128BytesToBeSent()
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto buffer = std::make_unique<TestBuffer>();
     // 3 bytes (wire on) + 14 times 8 bytes = 115 bytes
@@ -677,7 +656,7 @@ void GCodeSenderTest::doNotSendWireOffIfItWouldCauseMoreThan128BytesToBeSent()
     }
     // Now 12 bytes -> 127 bytes
     buffer->buffer() += "G01 X22 Y31\n";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
 
     GrblBufferLimitTestHelper testHelper(127, communicator.get(), serialPort, &fileSender);
 
@@ -695,18 +674,21 @@ void GCodeSenderTest::doNotExpectAcksForWireControllerRealTimeCommands()
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto buffer = std::make_unique<TestBuffer>();
     buffer->buffer() = "G01 Y1\nG00 Z9\n";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
 
     QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
 
     QTimer timer;
-    int count = 0;
+    int count = -1; // this is to take into account the message processing right after the hard reset
     connect(&timer, &QTimer::timeout, [&count, serialPort, &wireController](){
-        if (count < 4) {
+        if (count >= 0 && count < 4) {
             serialPort->simulateReceivedData("ok\r\n");
+        } else if (count == 4) {
+            serialPort->simulateReceivedData("<Idle|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
         }
         if (count == 1) {
             // This does not receive an ack
@@ -729,6 +711,7 @@ void GCodeSenderTest::doNotWaitForAcksIfStreamInterrupted()
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto buffer = std::make_unique<TestBuffer>();
     // 3 bytes (wire on) + 14 times 8 bytes = 115 bytes
@@ -739,7 +722,7 @@ void GCodeSenderTest::doNotWaitForAcksIfStreamInterrupted()
     buffer->buffer() += "G01 X11 Y77\n";
     // Next line would cause the 128 bytes limit to be crossed, should wait before sending
     buffer->buffer() += "G01 X10\n";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
 
     QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
 
@@ -756,12 +739,13 @@ void GCodeSenderTest::sendHardResetWhenStreamInterruptedByUser()
 {
     auto communicator = createCommunicator().first;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     QSignalSpy machineInitializedSpy(communicator.get(), &MachineCommunication::machineInitialized);
 
     auto buffer = std::make_unique<TestBuffer>();
     buffer->buffer() = "G01 X100\nG01 Y1\nG00 Z9";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
 
     // This is used to schedule a function to be executed when the QT event loop is executed
     // (interval is 0)
@@ -783,13 +767,14 @@ void GCodeSenderTest::sendHardResetWhenStreamErrorOccurs()
 {
     auto communicator = createCommunicator().first;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     QSignalSpy machineInitializedSpy(communicator.get(), &MachineCommunication::machineInitialized);
 
     auto buffer = std::make_unique<TestBuffer>();
     buffer->setReadError(true);
     buffer->buffer() = "G01 X100\n";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
 
     QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
 
@@ -807,12 +792,13 @@ void GCodeSenderTest::sendHardResetWhenMachineRepliesWithError()
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     QSignalSpy machineInitializedSpy(communicator.get(), &MachineCommunication::machineInitialized);
 
     auto buffer = std::make_unique<TestBuffer>();
     buffer->buffer() = "G01 X100\nG01 Y1\nG00 Z9";
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(buffer));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
 
     // This is used to schedule a function to be executed when the QT event loop is executed
     // (interval is 0)
@@ -836,11 +822,12 @@ void GCodeSenderTest::sendStreamingEndSignalAtStartIfErrorOccursBeforeStart()
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
 
     auto bufferUptr = std::make_unique<TestBuffer>();
     bufferUptr->buffer() = "G01 X100\nG01 Y1\nG00 Z9";
     TestBuffer* const buffer = bufferUptr.get();
-    GCodeSender fileSender(communicator.get(), &wireController, std::move(bufferUptr));
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(bufferUptr));
 
     QSignalSpy deviceDeleted(buffer, &QIODevice::destroyed);
     QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
@@ -856,6 +843,162 @@ void GCodeSenderTest::sendStreamingEndSignalAtStartIfErrorOccursBeforeStart()
     QCOMPARE(reason, GCodeSender::StreamEndReason::MachineErrorReply);
     QCOMPARE(description, tr("Firmware replied with error: ") + "10");
     QCOMPARE(deviceDeleted.count(), 1);
+}
+
+void GCodeSenderTest::endStreamingWithErrorIfInUnexpectedStatus()
+{
+    auto communicatorAndPort = createCommunicator();
+    auto communicator = std::move(communicatorAndPort.first);
+    auto serialPort = communicatorAndPort.second;
+    WireController wireController(communicator.get());
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
+
+    auto buffer = std::make_unique<TestBuffer>();
+    buffer->buffer() = "G01 Y1\nG00 Z9\n";
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
+
+    QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
+
+    QTimer timer;
+    // We send no acks, just switch status
+    int count;
+    bool inUnexpectedState = false;
+    connect(&timer, &QTimer::timeout, [&count, &inUnexpectedState, serialPort, &wireController](){
+        switch (count) {
+            case 0:
+                serialPort->simulateReceivedData("<Idle|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
+                break;
+            case 1:
+                serialPort->simulateReceivedData("<Run|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
+                break;
+            case 2:
+                serialPort->simulateReceivedData("<Hold|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
+                break;
+            case 3:
+                // Not a valid state, mapped to MachineState::Unknown
+                serialPort->simulateReceivedData("<Unknown|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
+                break;
+            case 4:
+                serialPort->simulateReceivedData("<Alarm|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
+                inUnexpectedState = true;
+                break;
+            default:
+                break;
+        }
+        ++count;
+    });
+    timer.start();
+
+    fileSender.streamData();
+
+    QVERIFY(inUnexpectedState);
+    QCOMPARE(endSpy.count(), 1);
+    auto reason = endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>();
+    QCOMPARE(reason, GCodeSender::StreamEndReason::MachineErrorReply);
+}
+
+void GCodeSenderTest::waitSomeTimeAtTheEndBeforeCheckingMachineIsIdle()
+{
+    // This is needed because with short g-codes we might send everything anche check the machine is
+    // idle before the machine switches to Run state (or before we poll the machine state and find
+    // out is is running). We also cannot be sure we will be notified that the machine is running,
+    // because e.g. a g-code that is simply "M3" the machine will never be in Run state (so we
+    // cannot wait for the machine to go Idle after being in Run). So solve this issue we simply
+    // wait few seconds before starting to check that the machine is idle at the end of streaming
+
+    auto communicatorAndPort = createCommunicator();
+    auto communicator = std::move(communicatorAndPort.first);
+    auto serialPort = communicatorAndPort.second;
+    WireController wireController(communicator.get());
+    // Very high polling delay to avoid having to check ? is sent, se simply send status when needed
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
+
+    auto buffer = std::make_unique<TestBuffer>();
+    buffer->buffer() = "G01 X100\n";
+    GCodeSender fileSender(1, 1000, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
+
+    // This is used to schedule a function to be executed when the QT event loop is executed
+    // (interval is 0).
+    QTimer timer;
+    int count = -1; // This is to take into account the message processing right after the hard reset
+    QTime chrono;
+    bool enoughTimeWaited = false;
+    connect(&timer, &QTimer::timeout, [serialPort, &count, &chrono, &enoughTimeWaited](){
+        switch (count) {
+            case -1:
+                break;
+            case 0:
+                chrono.start();
+                break;
+            case 1:
+                serialPort->simulateReceivedData("ok\r\n");
+                serialPort->simulateReceivedData("ok\r\n");
+                serialPort->simulateReceivedData("ok\r\n");
+                serialPort->simulateReceivedData("<Idle|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
+                break;
+            default:
+                if (chrono.elapsed() > 900) {
+                    enoughTimeWaited = true;
+                }
+                break;
+        }
+        ++count;
+    });
+    timer.start();
+
+    fileSender.streamData();
+
+    QVERIFY(enoughTimeWaited);
+}
+
+void GCodeSenderTest::waitSomeTimeAtStartAfterHardReset()
+{
+    // This is needed to make sure that "ok" for temperature setting commands after a hard reset are
+    // received before we start sending data and are then not computed as replies of streamed g-code
+    // commands.
+
+    auto communicatorAndPort = createCommunicator();
+    auto communicator = std::move(communicatorAndPort.first);
+    auto serialPort = communicatorAndPort.second;
+    WireController wireController(communicator.get());
+    // Very high polling delay to avoid having to check ? is sent, se simply send status when needed
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
+
+    auto buffer = std::make_unique<TestBuffer>();
+    buffer->buffer() = "G01 X100\n";
+    GCodeSender fileSender(1000, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
+
+    // This is used to schedule a function to be executed when the QT event loop is executed
+    // (interval is 0).
+    QTimer timer;
+    int count = -1; // This is to take into account the message processing right after the hard reset
+    QTime chrono;
+    bool enoughTimeWaited = false;
+    connect(&timer, &QTimer::timeout, [serialPort, &count, &chrono, &enoughTimeWaited](){
+        switch (count) {
+            case -1:
+            case 0:
+                break;
+            case 1:
+                serialPort->simulateReceivedData("ok\r\n");
+                serialPort->simulateReceivedData("ok\r\n");
+                serialPort->simulateReceivedData("ok\r\n");
+                serialPort->simulateReceivedData("<Idle|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
+                break;
+            default:
+                if (chrono.elapsed() > 900) {
+                    enoughTimeWaited = true;
+                }
+                break;
+        }
+        ++count;
+    });
+    timer.start();
+
+    chrono.start();
+    fileSender.streamData();
+
+    QVERIFY(enoughTimeWaited);
 }
 
 QTEST_GUILESS_MAIN(GCodeSenderTest)

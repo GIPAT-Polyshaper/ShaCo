@@ -7,9 +7,9 @@
 #include <QQueue>
 #include <QString>
 #include "machinecommunication.h"
+#include "machinestatusmonitor.h"
 #include "wirecontroller.h"
 
-// NOTE We should perhaps switch the wire off while in pause? What should we do when stopped by the user? Or when there is a failure reading data from file?
 class GCodeSender : public QObject
 {
     Q_OBJECT
@@ -28,8 +28,11 @@ public:
     };
 
 public:
-    // Remember to move gcodeDevice to the same thread as this class before passing it here!!!
-    explicit GCodeSender(MachineCommunication* communicator, WireController* wireController, std::unique_ptr<QIODevice>&& gcodeDevice);
+    // hardResetDelay is how much to wait at start after the hard reset (see
+    // waitSomeTimeAtStartAfterHardReset test). Value is in milliseconds
+    // idleWaitInterval is how much to wait at the end before starting to check that machine is idle
+    // (see waitSomeTimeAtTheEndBeforeCheckingMachineIsIdle test). Value is in milliseconds
+    explicit GCodeSender(int hardResetDelay, int idleWaitInterval, MachineCommunication* communicator, WireController* wireController, MachineStatusMonitor* machineStatusMonitor, std::unique_ptr<QIODevice>&& gcodeDevice);
 
 public slots:
     void streamData();
@@ -44,19 +47,22 @@ signals:
 private slots:
     void portClosedWithError();
     void portClosed();
-    void dataReceived(QByteArray data);
+    void messageReceived(QByteArray message);
+    void stateChanged(MachineState newState);
 
 private:
     void closeStream(GCodeSender::StreamEndReason reason, QString description);
-    int findEndCommandInPartialReply() const;
     int bytesSentSinceLastAck() const;
     void waitWhileBufferFull(int requiredSpace);
     void emitStreamingEnded();
+    void processEvents();
 
+    const int m_hardResetDelay;
+    const int m_idleWaitInterval;
     MachineCommunication* const m_communicator;
     WireController* const m_wireController;
+    MachineStatusMonitor* const m_machineStatusMonitor;
     std::unique_ptr<QIODevice> m_device; // Non const to be reset when streaming ends
-    QString m_partialReply;
     QQueue<int> m_sentBytes;
     GCodeSender::StreamEndReason m_streamEndReason;
     QString m_streamEndDescription;

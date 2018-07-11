@@ -2,13 +2,12 @@
 #define MACHINECOMMUNICATION_H
 
 #include <memory>
+#include <QList>
 #include <QObject>
 #include "portdiscovery.h"
 #include "machineinfo.h"
 #include "serialport.h"
 
-// TODO-TOMMY It might be useful to add a function to obtain the machien status (? real time command). It
-// contains also the temperature override, in case we want to make it more "closed-loop"
 class MachineCommunication : public QObject
 {
     Q_OBJECT
@@ -29,7 +28,10 @@ public slots:
 
 signals:
     void dataSent(QByteArray data);
+    // emitted whenever data is received
     void dataReceived(QByteArray data);
+    // emitted when a complete message is received. The terminating "\r\n" is removed from the message
+    void messageReceived(QByteArray message);
     void machineInitialized();
     void portClosedWithError(QString reason);
     void portClosed();
@@ -39,9 +41,11 @@ private slots:
 
 private:
     bool checkPortInErrorAndCloseIfTrue();
+    QList<QByteArray> extractMessages();
 
     const int m_hardResetDelay;
     std::unique_ptr<SerialPortInterface> m_serialPort;
+    QByteArray m_messageBuffer;
 };
 
 #endif // MACHINECOMMUNICATION_H

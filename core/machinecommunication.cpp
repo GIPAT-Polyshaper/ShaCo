@@ -82,9 +82,14 @@ void MachineCommunication::hardReset()
 void MachineCommunication::readData()
 {
     auto data = m_serialPort->readAll();
+    m_messageBuffer += data;
 
     if (!checkPortInErrorAndCloseIfTrue()) {
         emit dataReceived(data);
+
+        for (auto message: extractMessages()) {
+            emit messageReceived(message);
+        }
     }
 }
 
@@ -97,4 +102,17 @@ bool MachineCommunication::checkPortInErrorAndCloseIfTrue()
     } else {
         return false;
     }
+}
+
+QList<QByteArray> MachineCommunication::extractMessages()
+{
+    QList<QByteArray> list;
+
+    int endline;
+    while ((endline = m_messageBuffer.indexOf("\r\n")) != -1) {
+        list.append(m_messageBuffer.left(endline));
+        m_messageBuffer.remove(0, endline + 2);
+    }
+
+    return list;
 }

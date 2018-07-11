@@ -9,9 +9,11 @@ QT += quick quickcontrols2 serialport
 app.depends = core
 
 SOURCES += main.cpp \
-    controller.cpp
+    controller.cpp \
+    worker.cpp
 LIBS += -L../core -lcore
 RESOURCES += ../qml.qrc
 
 HEADERS += \
-    controller.h
+    controller.h \
+    worker.h

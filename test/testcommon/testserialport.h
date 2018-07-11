@@ -11,7 +11,7 @@ public:
 
     bool open() override;
     qint64 write(const QByteArray &data) override;
-    QByteArray read(int, int) override; // Not used in this test
+    QByteArray read(int, int) override; // Not used
     QByteArray readAll() override;
     bool inError() const override;
     QString errorString() const override;

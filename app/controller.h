@@ -5,11 +5,9 @@
 #include <QThread>
 #include <QSerialPortInfo>
 #include <QUrl>
-#include "core/gcodesender.h"
-#include "core/machinecommunication.h"
-#include "core/machineinfo.h"
-#include "core/portdiscovery.h"
-#include "core/wirecontroller.h"
+#include "worker.h"
+
+class WorkerThread;
 
 // TODO-TOMMY Add a test for this class??? If so we should make it template on all components to test connections and signal that are emitted
 class Controller : public QObject
@@ -21,10 +19,14 @@ class Controller : public QObject
     Q_PROPERTY(bool wireOn READ wireOn WRITE setWireOn NOTIFY wireOnChanged)
     Q_PROPERTY(float wireTemperature READ wireTemperature WRITE setWireTemperature NOTIFY wireTemperatureChanged)
     Q_PROPERTY(bool paused READ paused NOTIFY pausedChanged)
+    Q_PROPERTY(bool senderCreated READ senderCreated NOTIFY senderCreatedChanged)
 
 public:
     explicit Controller(QObject *parent = nullptr);
     virtual ~Controller();
+
+    // Called by worker thread when all objects have been created
+    void creationFinished();
 
     bool connected() const;
     bool streamingGCode() const;
@@ -32,6 +34,7 @@ public:
     bool wireOn() const;
     float wireTemperature() const;
     bool paused() const;
+    bool senderCreated() const;
 
 public slots:
     void sendLine(QByteArray line);
@@ -57,8 +60,10 @@ signals:
     void wireTemperatureChanged();
     void streamingEndedWithError(QString reason);
     void pausedChanged();
+    void senderCreatedChanged();
 
 private slots:
+    void gcodeSenderCreated(GCodeSender* sender);
     void signalPortFound(MachineInfo info);
     void signalPortClosedWithError(QString reason);
     void signalPortClosed();
@@ -66,19 +71,15 @@ private slots:
     void streamingEnded(GCodeSender::StreamEndReason reason, QString description);
 
 private:
-    void moveToPortThread(QObject* obj);
     void setPaused();
     void unsetPaused();
 
-    QThread m_portThread;
-    PortDiscovery<QSerialPortInfo>* const m_portDiscoverer;
-    MachineCommunication* const m_machineCommunicator;
-    WireController* const m_wireController;
-    GCodeSender* m_gcodeSender;
+    WorkerThread m_thread;
     bool m_connected;
     bool m_streamingGCode;
     bool m_stoppingStreaming;
     bool m_paused;
+    bool m_senderCreated;
 };
 
 #endif // CONTROLLER_H

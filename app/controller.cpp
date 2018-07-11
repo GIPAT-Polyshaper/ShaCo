@@ -1,43 +1,74 @@
 #include "controller.h"
 #include <memory>
-#include <QFile>
 #include <QMetaObject>
 
 Controller::Controller(QObject *parent)
     : QObject(parent)
-    , m_portThread()
-    , m_portDiscoverer(new PortDiscovery<QSerialPortInfo>(QSerialPortInfo::availablePorts, [](QSerialPortInfo p){ return std::make_unique<SerialPort>(p); }, 100, 100))
-    , m_machineCommunicator(new MachineCommunication())
-    , m_wireController(new WireController(m_machineCommunicator))
-    , m_gcodeSender(nullptr)
+    , m_thread(this)
     , m_connected(false)
     , m_streamingGCode(false)
     , m_stoppingStreaming(false)
     , m_paused(false)
+    , m_senderCreated(false)
 {
-    moveToPortThread(m_portDiscoverer);
-    moveToPortThread(m_machineCommunicator);
-    moveToPortThread(m_wireController);
-
-    connect(m_portDiscoverer, &PortDiscovery<QSerialPortInfo>::startedDiscoveringPort, this, &Controller::startedPortDiscovery);
-    connect(m_portDiscoverer, &PortDiscovery<QSerialPortInfo>::portFound, this, &Controller::signalPortFound);
-    connect(m_portDiscoverer, &PortDiscovery<QSerialPortInfo>::portFound, m_machineCommunicator, &MachineCommunication::portFound);
-    connect(m_machineCommunicator, &MachineCommunication::dataSent, this, &Controller::dataSent);
-    connect(m_machineCommunicator, &MachineCommunication::dataReceived, this, &Controller::dataReceived);
-    connect(m_machineCommunicator, &MachineCommunication::portClosedWithError, this, &Controller::signalPortClosedWithError);
-    connect(m_machineCommunicator, &MachineCommunication::portClosedWithError, m_portDiscoverer, &PortDiscovery<QSerialPortInfo>::start);
-    connect(m_machineCommunicator, &MachineCommunication::portClosed, this, &Controller::signalPortClosed);
-    connect(m_machineCommunicator, &MachineCommunication::portClosed, m_portDiscoverer, &PortDiscovery<QSerialPortInfo>::start);
-    connect(m_wireController, &WireController::temperatureChanged, this, &Controller::wireTemperatureChanged);
-
-    m_portThread.start();
-    QMetaObject::invokeMethod(m_portDiscoverer, "start");
+    m_thread.start();
 }
 
 Controller::~Controller()
 {
-    m_portThread.quit();
-    m_portThread.wait();
+    m_thread.quit();
+    m_thread.wait();
+}
+
+void Controller::creationFinished()
+{
+    connect(
+        m_thread.worker()->portDiscoverer(), &PortDiscovery<QSerialPortInfo>::startedDiscoveringPort,
+        this, &Controller::startedPortDiscovery
+    );
+    connect(
+        m_thread.worker()->portDiscoverer(), &PortDiscovery<QSerialPortInfo>::portFound,
+        this, &Controller::signalPortFound
+    );
+    connect(
+        m_thread.worker()->portDiscoverer(), &PortDiscovery<QSerialPortInfo>::portFound,
+        m_thread.worker()->machineCommunicator(), &MachineCommunication::portFound
+    );
+    connect(
+        m_thread.worker()->machineCommunicator(), &MachineCommunication::dataSent,
+        this, &Controller::dataSent
+    );
+    connect(
+        m_thread.worker()->machineCommunicator(), &MachineCommunication::dataReceived,
+        this, &Controller::dataReceived
+    );
+    connect(
+        m_thread.worker()->machineCommunicator(), &MachineCommunication::portClosedWithError,
+        this, &Controller::signalPortClosedWithError
+    );
+    connect(
+        m_thread.worker()->machineCommunicator(), &MachineCommunication::portClosedWithError,
+        m_thread.worker()->portDiscoverer(), &PortDiscovery<QSerialPortInfo>::start
+    );
+    connect(
+        m_thread.worker()->machineCommunicator(), &MachineCommunication::portClosed,
+        this, &Controller::signalPortClosed
+    );
+    connect(
+        m_thread.worker()->machineCommunicator(), &MachineCommunication::portClosed,
+        m_thread.worker()->portDiscoverer(), &PortDiscovery<QSerialPortInfo>::start
+    );
+    connect(
+        m_thread.worker()->wireController(), &WireController::temperatureChanged,
+        this, &Controller::wireTemperatureChanged
+    );
+    connect(
+        m_thread.worker(), &Worker::gcodeSenderCreated,
+        this, &Controller::gcodeSenderCreated
+    );
+
+    auto p = m_thread.worker()->portDiscoverer();
+    QMetaObject::invokeMethod(p, [p](){ p->start(); });
 }
 
 bool Controller::connected() const
@@ -59,7 +90,8 @@ bool Controller::wireOn() const
 {
     bool isWireOn = false;
 
-    QMetaObject::invokeMethod(m_wireController, [wireController = m_wireController](){ return wireController->isWireOn(); }, Qt::BlockingQueuedConnection, &isWireOn);
+    const auto p = m_thread.worker()->wireController();
+    QMetaObject::invokeMethod(p, [p](){ return p->isWireOn(); }, Qt::BlockingQueuedConnection, &isWireOn);
 
     return isWireOn;
 }
@@ -68,7 +100,8 @@ float Controller::wireTemperature() const
 {
     float temperature = 0.0;
 
-    QMetaObject::invokeMethod(m_wireController, [wireController = m_wireController](){ return wireController->temperature(); }, Qt::BlockingQueuedConnection, &temperature);
+    const auto p = m_thread.worker()->wireController();
+    QMetaObject::invokeMethod(p, [p](){ return p->temperature(); }, Qt::BlockingQueuedConnection, &temperature);
 
     return temperature;
 }
@@ -78,25 +111,21 @@ bool Controller::paused() const
     return m_paused;
 }
 
+bool Controller::senderCreated() const
+{
+    return m_senderCreated;
+}
+
 void Controller::sendLine(QByteArray line)
 {
-    QMetaObject::invokeMethod(m_machineCommunicator, [communicator = m_machineCommunicator, line](){ communicator->writeLine(line); });
+    auto p = m_thread.worker()->machineCommunicator();
+    QMetaObject::invokeMethod(p, [p, line](){ p->writeLine(line); });
 }
 
 void Controller::setGCodeFile(QUrl fileUrl)
 {
-    auto file = std::make_unique<QFile>(fileUrl.toLocalFile());
-    file->moveToThread(&m_portThread);
-
-    if (m_gcodeSender) {
-        QMetaObject::invokeMethod(m_gcodeSender, [sender = m_gcodeSender](){ sender->deleteLater(); });
-    }
-
-    m_gcodeSender = new GCodeSender(m_machineCommunicator, m_wireController, std::move(file));
-    moveToPortThread(m_gcodeSender);
-
-    connect(m_gcodeSender, &GCodeSender::streamingStarted, this, &Controller::streamingStarted);
-    connect(m_gcodeSender, &GCodeSender::streamingEnded, this, &Controller::streamingEnded);
+    auto p = m_thread.worker();
+    QMetaObject::invokeMethod(p, [p, fileUrl](){ p->setGCodeFile(fileUrl); });
 }
 
 void Controller::setWireOn(bool wireOn)
@@ -105,10 +134,11 @@ void Controller::setWireOn(bool wireOn)
         return;
     }
 
+    auto p = m_thread.worker()->wireController();
     if (wireOn) {
-        QMetaObject::invokeMethod(m_wireController, [wireController = m_wireController](){ wireController->switchWireOn(); });
+        QMetaObject::invokeMethod(p, [p](){ p->switchWireOn(); });
     } else {
-        QMetaObject::invokeMethod(m_wireController, [wireController = m_wireController](){ wireController->switchWireOff(); });
+        QMetaObject::invokeMethod(p, [p](){ p->switchWireOff(); });
     }
 
     emit wireOnChanged();
@@ -120,10 +150,11 @@ void Controller::setWireTemperature(float temperature)
         return;
     }
 
+    auto p = m_thread.worker()->wireController();
     if (streamingGCode()) {
-        QMetaObject::invokeMethod(m_wireController, [wireController = m_wireController, temperature](){ wireController->setRealTimeTemperature(temperature); });
+        QMetaObject::invokeMethod(p, [p, temperature](){ p->setRealTimeTemperature(temperature); });
     } else {
-        QMetaObject::invokeMethod(m_wireController, [wireController = m_wireController, temperature](){ wireController->setTemperature(temperature); });
+        QMetaObject::invokeMethod(p, [p, temperature](){ p->setTemperature(temperature); });
     }
 
     emit wireTemperatureChanged();
@@ -131,14 +162,16 @@ void Controller::setWireTemperature(float temperature)
 
 void Controller::startStreamingGCode()
 {
-    QMetaObject::invokeMethod(m_gcodeSender, [sender = m_gcodeSender](){ sender->streamData(); });
+    auto p = m_thread.worker()->gcodeSender();
+    QMetaObject::invokeMethod(p, [p](){ p->streamData(); });
 
     unsetPaused();
 }
 
 void Controller::stopStreaminGCode()
 {
-    QMetaObject::invokeMethod(m_gcodeSender, [sender = m_gcodeSender](){ sender->interruptStreaming(); });
+    auto p = m_thread.worker()->gcodeSender();
+    QMetaObject::invokeMethod(p, [p](){ p->interruptStreaming(); });
 
     unsetPaused();
 
@@ -152,7 +185,8 @@ void Controller::feedHold()
         return;
     }
 
-    QMetaObject::invokeMethod(m_machineCommunicator, [communicator = m_machineCommunicator](){ communicator->feedHold(); });
+    auto p = m_thread.worker()->machineCommunicator();
+    QMetaObject::invokeMethod(p, [p](){ p->feedHold(); });
 
     setPaused();
 }
@@ -163,9 +197,19 @@ void Controller::resumeFeedHold()
         return;
     }
 
-    QMetaObject::invokeMethod(m_machineCommunicator, [communicator = m_machineCommunicator](){ communicator->resumeFeedHold(); });
+    auto p = m_thread.worker()->machineCommunicator();
+    QMetaObject::invokeMethod(p, [p](){ p->resumeFeedHold(); });
 
     unsetPaused();
+}
+
+void Controller::gcodeSenderCreated(GCodeSender* sender)
+{
+    connect(sender, &GCodeSender::streamingStarted, this, &Controller::streamingStarted);
+    connect(sender, &GCodeSender::streamingEnded, this, &Controller::streamingEnded);
+
+    m_senderCreated = true;
+    emit senderCreatedChanged();
 }
 
 void Controller::signalPortFound(MachineInfo info)
@@ -213,12 +257,9 @@ void Controller::streamingEnded(GCodeSender::StreamEndReason reason, QString des
         m_stoppingStreaming = false;
         emit stoppingStreamingChanged();
     }
-}
 
-void Controller::moveToPortThread(QObject* obj)
-{
-    obj->moveToThread(&m_portThread);
-    connect(&m_portThread, &QThread::finished, obj, &QObject::deleteLater);
+    m_senderCreated = false;
+    emit senderCreatedChanged();
 }
 
 void Controller::setPaused()
