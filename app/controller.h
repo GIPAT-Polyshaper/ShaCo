@@ -19,6 +19,7 @@ class Controller : public QObject
     Q_PROPERTY(bool wireOn READ wireOn WRITE setWireOn NOTIFY wireOnChanged)
     Q_PROPERTY(float wireTemperature READ wireTemperature WRITE setWireTemperature NOTIFY wireTemperatureChanged)
     Q_PROPERTY(bool paused READ paused NOTIFY pausedChanged)
+    Q_PROPERTY(bool senderCreated READ senderCreated NOTIFY senderCreatedChanged)
 
 public:
     explicit Controller(QObject *parent = nullptr);
@@ -33,6 +34,7 @@ public:
     bool wireOn() const;
     float wireTemperature() const;
     bool paused() const;
+    bool senderCreated() const;
 
 public slots:
     void sendLine(QByteArray line);
@@ -58,6 +60,7 @@ signals:
     void wireTemperatureChanged();
     void streamingEndedWithError(QString reason);
     void pausedChanged();
+    void senderCreatedChanged();
 
 private slots:
     void gcodeSenderCreated(GCodeSender* sender);
@@ -76,6 +79,7 @@ private:
     bool m_streamingGCode;
     bool m_stoppingStreaming;
     bool m_paused;
+    bool m_senderCreated;
 };
 
 #endif // CONTROLLER_H

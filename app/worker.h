@@ -14,7 +14,7 @@
 class Controller;
 class Worker;
 
-// TODO-TOMMY This is not tested, see comment in controller.hs!
+// TODO-TOMMY This is not tested, see comment in controller.h
 // This simply instantiates the worker class and then invokes a method in Controller to signal that
 // object creation has finished
 class WorkerThread : public QThread

@@ -63,7 +63,7 @@ void Worker::setGCodeFile(QUrl fileUrl)
     auto file = std::make_unique<QFile>(fileUrl.toLocalFile());
 
     // The old one, if existing, is deleted
-    m_gcodeSender = std::make_unique<GCodeSender>(m_machineCommunicator.get(), m_wireController.get(), std::move(file));
+    m_gcodeSender = std::make_unique<GCodeSender>(1000, 2000, m_machineCommunicator.get(), m_wireController.get(), m_statusMonitor.get(), std::move(file));
 
     emit gcodeSenderCreated(m_gcodeSender.get());
 }

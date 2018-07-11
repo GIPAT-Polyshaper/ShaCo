@@ -26,10 +26,13 @@ namespace {
 
 const bool GCodeSender::streamEndReasonRegistered = registerStreamEndReason();
 
-GCodeSender::GCodeSender(MachineCommunication* communicator, WireController* wireController, std::unique_ptr<QIODevice>&& gcodeDevice)
+GCodeSender::GCodeSender(int hardResetDelay, int idleWaitInterval, MachineCommunication* communicator, WireController* wireController, MachineStatusMonitor *machineStatusMonitor, std::unique_ptr<QIODevice>&& gcodeDevice)
     : QObject(nullptr)
+    , m_hardResetDelay(hardResetDelay)
+    , m_idleWaitInterval(idleWaitInterval)
     , m_communicator(communicator)
     , m_wireController(wireController)
+    , m_machineStatusMonitor(machineStatusMonitor)
     , m_device(std::move(gcodeDevice))
     , m_streamEndReason(StreamEndReason::Completed)
 {
@@ -38,6 +41,7 @@ GCodeSender::GCodeSender(MachineCommunication* communicator, WireController* wir
     connect(m_communicator, &MachineCommunication::portClosedWithError, this, &GCodeSender::portClosedWithError);
     connect(m_communicator, &MachineCommunication::portClosed, this, &GCodeSender::portClosed);
     connect(m_communicator, &MachineCommunication::messageReceived, this, &GCodeSender::messageReceived);
+    connect(m_machineStatusMonitor, &MachineStatusMonitor::stateChanged, this, &GCodeSender::stateChanged);
 }
 
 void GCodeSender::streamData()
@@ -56,6 +60,11 @@ void GCodeSender::streamData()
     // This works because all connection are synchronous (i.e. function calls), we can send data
     // only after port has been really opened
     m_communicator->hardReset();
+
+    // This is to make sure replies to commands sent by wireController after hard reset are received
+    // before we start sending data, and are then not considered answers to streamed g-code
+    QThread::msleep(m_hardResetDelay);
+    QCoreApplication::processEvents();
 
     // Switching wire on at start
     m_wireController->switchWireOn();
@@ -84,20 +93,18 @@ void GCodeSender::streamData()
     }
 
     // Switching wire off at the end (if device is closed we either lost machine communication or
-    // machine was hard reset). Grbl does not send ok until the wire off command is really executed,
-    // so we don't exit from the cycle below until work has really ended
+    // machine was hard reset)
     if (m_device) {
         waitWhileBufferFull(m_wireController->switchWireOffCommandLength());
         m_wireController->switchWireOff();
         m_sentBytes.enqueue(m_wireController->switchWireOffCommandLength());
     }
 
-    // Waiting remaining acks
-    while (m_device && !m_sentBytes.isEmpty()) {
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+    QThread::msleep(m_idleWaitInterval);
 
-        // Small delay, to avoid consuming too much cpu
-        QThread::usleep(500);
+    // Waiting remaining acks and for machine to go Idle
+    while (m_device && (m_machineStatusMonitor->state() != MachineState::Idle || !m_sentBytes.isEmpty())) {
+        processEvents();
     }
 
     if (m_device) {
@@ -136,9 +143,18 @@ void GCodeSender::messageReceived(QByteArray message)
     }
 }
 
+void GCodeSender::stateChanged(MachineState newState)
+{
+    if (newState != MachineState::Idle && newState != MachineState::Run &&
+            newState != MachineState::Hold && newState != MachineState::Unknown) {
+        closeStream(StreamEndReason::MachineErrorReply,
+                    tr("Machine changed to unexpected state: ") + machineState2String(newState));
+    }
+}
+
 void GCodeSender::closeStream(GCodeSender::StreamEndReason reason, QString description)
 {
-    // For some StreamEndResons we also send a soft reset
+    // For some StreamEndResons we also send a hard reset
     switch (reason) {
         case StreamEndReason::MachineErrorReply:
         case StreamEndReason::StreamError:
@@ -163,14 +179,19 @@ void GCodeSender::waitWhileBufferFull(int requiredSpace)
 {
     // Processing QT events while waiting for firmware buffer to find space
     while (m_device && bytesSentSinceLastAck() + requiredSpace > grblBufferSize) {
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
-
-        // Small delay, to avoid consuming too much cpu
-        QThread::usleep(500);
+        processEvents();
     }
 }
 
 void GCodeSender::emitStreamingEnded()
 {
     emit streamingEnded(m_streamEndReason, m_streamEndDescription);
+}
+
+void GCodeSender::processEvents()
+{
+    QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+
+    // Small delay, to avoid consuming too much cpu
+    QThread::usleep(500);
 }

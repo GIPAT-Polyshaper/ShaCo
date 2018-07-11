@@ -9,6 +9,7 @@ Controller::Controller(QObject *parent)
     , m_streamingGCode(false)
     , m_stoppingStreaming(false)
     , m_paused(false)
+    , m_senderCreated(false)
 {
     m_thread.start();
 }
@@ -61,6 +62,10 @@ void Controller::creationFinished()
         m_thread.worker()->wireController(), &WireController::temperatureChanged,
         this, &Controller::wireTemperatureChanged
     );
+    connect(
+        m_thread.worker(), &Worker::gcodeSenderCreated,
+        this, &Controller::gcodeSenderCreated
+    );
 
     auto p = m_thread.worker()->portDiscoverer();
     QMetaObject::invokeMethod(p, [p](){ p->start(); });
@@ -104,6 +109,11 @@ float Controller::wireTemperature() const
 bool Controller::paused() const
 {
     return m_paused;
+}
+
+bool Controller::senderCreated() const
+{
+    return m_senderCreated;
 }
 
 void Controller::sendLine(QByteArray line)
@@ -197,6 +207,9 @@ void Controller::gcodeSenderCreated(GCodeSender* sender)
 {
     connect(sender, &GCodeSender::streamingStarted, this, &Controller::streamingStarted);
     connect(sender, &GCodeSender::streamingEnded, this, &Controller::streamingEnded);
+
+    m_senderCreated = true;
+    emit senderCreatedChanged();
 }
 
 void Controller::signalPortFound(MachineInfo info)
@@ -244,6 +257,9 @@ void Controller::streamingEnded(GCodeSender::StreamEndReason reason, QString des
         m_stoppingStreaming = false;
         emit stoppingStreamingChanged();
     }
+
+    m_senderCreated = false;
+    emit senderCreatedChanged();
 }
 
 void Controller::setPaused()
