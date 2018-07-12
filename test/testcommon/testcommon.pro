@@ -10,7 +10,9 @@ QT += serialport
 QT -= gui
 
 INCLUDEPATH += ../..
-LIBS += -L../../core -lcore
+unix:LIBS += -L../core -lcore
+win32:debug:LIBS += -L../core/debug -lcore
+win32:release:LIBS += -L../core/release -lcore
 
 HEADERS += \
     testportdiscovery.h \
