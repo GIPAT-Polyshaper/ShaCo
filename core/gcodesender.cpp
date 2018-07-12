@@ -51,7 +51,7 @@ void GCodeSender::streamData()
     if (!m_device) {
         emitStreamingEnded();
         return;
-    } else if (!m_device->open(QIODevice::ReadOnly)) {
+    } else if (!m_device->open(QIODevice::ReadOnly | QIODevice::Text)) {
         closeStream(StreamEndReason::StreamError, tr("Input device could not be opened"));
         emitStreamingEnded();
         return;

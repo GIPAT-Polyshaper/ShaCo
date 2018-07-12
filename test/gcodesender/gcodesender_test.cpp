@@ -96,6 +96,7 @@ private Q_SLOTS:
     void endStreamingWithErrorIfInUnexpectedStatus();
     void waitSomeTimeAtTheEndBeforeCheckingMachineIsIdle();
     void waitSomeTimeAtStartAfterHardReset();
+    void openDeviceAsText();
 };
 
 GCodeSenderTest::GCodeSenderTest()
@@ -999,6 +1000,31 @@ void GCodeSenderTest::waitSomeTimeAtStartAfterHardReset()
     fileSender.streamData();
 
     QVERIFY(enoughTimeWaited);
+}
+
+void GCodeSenderTest::openDeviceAsText()
+{
+    auto communicatorAndPort = createCommunicator();
+    auto communicator = std::move(communicatorAndPort.first);
+    auto serialPort = communicatorAndPort.second;
+    WireController wireController(communicator.get());
+    // Very high polling delay to avoid having to check ? is sent, se simply send status when needed
+    MachineStatusMonitor statusMonitor(100000, communicator.get());
+
+    auto buffer = std::make_unique<TestBuffer>();
+    // Windows endline, will be converted to \n if device is opened as text
+    buffer->buffer() = "G01 X100\r\n";
+    GCodeSender fileSender(1, 1, communicator.get(), &wireController, &statusMonitor, std::move(buffer));
+
+    QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
+
+    QTimer timer;
+    sendAcks(timer, serialPort, 3);
+
+    fileSender.streamData();
+
+    QCOMPARE(dataSentSpy.count(), 6);
+    QCOMPARE(dataSentSpy.at(4).at(0).toByteArray(), "G01 X100\n"); // converted endline
 }
 
 QTEST_GUILESS_MAIN(GCodeSenderTest)
