@@ -19,12 +19,6 @@ qint64 TestSerialPort::write(const QByteArray &data)
     return data.size();
 }
 
-QByteArray TestSerialPort::read(int, int) // Not used in this test
-{
-    throw QString("read should not be used in this test!!!");
-    return QByteArray();
-}
-
 QByteArray TestSerialPort::readAll()
 {
     return m_readData;

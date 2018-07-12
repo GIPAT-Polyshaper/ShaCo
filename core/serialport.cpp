@@ -27,8 +27,7 @@ bool SerialPort::open()
 
     // Reading and discarding initial data. We have to give Arduino some time to boot (board is
     // reset when port is opened)
-    QThread::msleep(1500);
-    m_serialPort.waitForReadyRead(1500);
+    QThread::msleep(2000);
     m_serialPort.readAll();
 
     return retval;
@@ -57,15 +56,6 @@ qint64 SerialPort::write(const QByteArray& data)
     }
 
     return retval;
-}
-
-QByteArray SerialPort::read(int msec, int maxBytes)
-{
-    if (m_serialPort.waitForReadyRead(msec)) {
-        return m_serialPort.read(maxBytes);
-    }
-
-    return QByteArray();
 }
 
 QByteArray SerialPort::readAll()

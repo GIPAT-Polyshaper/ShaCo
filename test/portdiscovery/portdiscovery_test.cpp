@@ -58,7 +58,7 @@ public:
         return data.size();
     }
 
-    QByteArray read(int, int) override
+    QByteArray readAll() override
     {
         if (m_answers.isEmpty()) {
             return QByteArray();
@@ -68,12 +68,6 @@ public:
 
         QThread::msleep(answer.second);
         return answer.first;
-    }
-
-    QByteArray readAll() override // Not used in this test
-    {
-        throw QString("readAll should not be used in this test!!!");
-        return QByteArray();
     }
 
     bool inError() const override // Not used in this test

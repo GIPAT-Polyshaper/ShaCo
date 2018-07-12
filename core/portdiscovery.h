@@ -106,8 +106,9 @@ private:
         p->write("$I\n");
 
         for (int i = 0; i < m_maxReadAttemptsPerPort && !answer.endsWith("ok\r\n"); ++i) {
-            auto partial = p->read(100, 1000);
+            auto partial = p->readAll();
             answer.append(partial);
+            QThread::msleep(50);
         }
 
         qDebug() << "machine answer: " << answer;
