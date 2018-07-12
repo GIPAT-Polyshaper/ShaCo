@@ -1,4 +1,7 @@
 #include "utils.h"
+#include <memory>
+#include "core/machinecommunication.h"
+#include "core/machineinfo.h"
 #include "testportdiscovery.h"
 
 std::pair<std::unique_ptr<MachineCommunication>, TestSerialPort*> createCommunicator(int hardResetDelay)

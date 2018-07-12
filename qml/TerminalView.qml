@@ -1,6 +1,7 @@
 import QtQuick 2.4
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
+import QtQuick.Dialogs 1.1
 
 ColumnLayout {
     id: root
@@ -8,6 +9,27 @@ ColumnLayout {
     signal back
 
     property int bufferSize: 10000
+
+    QtObject {
+        id: privateProps
+
+        property bool firstTimeShown: true
+    }
+
+    onVisibleChanged:
+        if (visible && privateProps.firstTimeShown) {
+            privateProps.firstTimeShown = false
+            terminalUseWarning.open()
+        }
+
+    MessageDialog {
+         id: terminalUseWarning
+         title: qsTr("Warning")
+         text: qsTr("Terminal is an advanced feature, misuse may lead to inconsistent state! Use only if you know what you are doing")
+         icon: StandardIcon.Warning
+         standardButtons: StandardButton.Ok
+         visible: false
+    }
 
     Connections {
         target: controller

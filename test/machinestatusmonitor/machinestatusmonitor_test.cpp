@@ -33,7 +33,7 @@ void MachineStatusMonitorTest::sendStatusReportQueryCommandWhenMachineIsInitiali
 {
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
-    auto communicator = std::make_unique<MachineCommunication>();
+    auto communicator = std::make_unique<MachineCommunication>(1000);
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
 
@@ -51,7 +51,7 @@ void MachineStatusMonitorTest::periodicallySendStatusReportQueryCommand()
 {
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
-    auto communicator = std::make_unique<MachineCommunication>();
+    auto communicator = std::make_unique<MachineCommunication>(1000);
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
 

@@ -25,11 +25,6 @@ bool SerialPort::open()
 
     auto retval = m_serialPort.open(QIODevice::ReadWrite);
 
-    // Reading and discarding initial data. We have to give Arduino some time to boot (board is
-    // reset when port is opened)
-    QThread::msleep(2000);
-    m_serialPort.readAll();
-
     return retval;
 }
 

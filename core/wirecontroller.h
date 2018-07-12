@@ -2,6 +2,7 @@
 #define WIRECONTROLLER_H
 
 #include <QObject>
+#include "commandsender.h"
 #include "machinecommunication.h"
 
 // NOTE we should perhaps tell this class when a set-temperature command is sent, e.g. via terminal
@@ -14,14 +15,12 @@ class WireController : public QObject
 {
     Q_OBJECT
 public:
-    explicit WireController(MachineCommunication* communicator);
+    explicit WireController(MachineCommunication* communicator, CommandSender* commandSender);
 
     float temperature() const;
     bool isWireOn() const;
     float minRealTimeTemperature() const;
     float maxRealTimeTemperature() const;
-    int switchWireOnCommandLength() const;
-    int switchWireOffCommandLength() const;
 
 public slots:
     void setTemperature(float temperature);
@@ -43,6 +42,7 @@ private:
     void forceWireOff();
 
     MachineCommunication* const m_communicator;
+    CommandSender* const m_commandSender;
     bool m_wireOn;
     float m_baseTemperature; // The temperature set using setTemperature()
     int m_realTimePercent;

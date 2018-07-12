@@ -26,9 +26,10 @@ void WorkerThread::run()
 }
 
 Worker::Worker()
-    : m_portDiscoverer(new PortDiscovery<QSerialPortInfo>(QSerialPortInfo::availablePorts, [](QSerialPortInfo p){ return std::make_unique<SerialPort>(p); }, 100, 100))
-    , m_machineCommunicator(new MachineCommunication())
-    , m_wireController(new WireController(m_machineCommunicator.get()))
+    : m_portDiscoverer(new PortDiscovery<QSerialPortInfo>(QSerialPortInfo::availablePorts, [](QSerialPortInfo p){ return std::make_unique<SerialPort>(p); }, 1000, 300, 5))
+    , m_machineCommunicator(new MachineCommunication(1000))
+    , m_commandSender(new CommandSender(m_machineCommunicator.get()))
+    , m_wireController(new WireController(m_machineCommunicator.get(), m_commandSender.get()))
     , m_statusMonitor(new MachineStatusMonitor(1000, m_machineCommunicator.get())) // polling every second
 {
 }
@@ -43,7 +44,12 @@ MachineCommunication* Worker::machineCommunicator() const
     return m_machineCommunicator.get();
 }
 
-WireController *Worker::wireController() const
+CommandSender* Worker::commandSender() const
+{
+    return m_commandSender.get();
+}
+
+WireController* Worker::wireController() const
 {
     return m_wireController.get();
 }
@@ -63,7 +69,7 @@ void Worker::setGCodeFile(QUrl fileUrl)
     auto file = std::make_unique<QFile>(fileUrl.toLocalFile());
 
     // The old one, if existing, is deleted
-    m_gcodeSender = std::make_unique<GCodeSender>(1000, 2000, m_machineCommunicator.get(), m_wireController.get(), m_statusMonitor.get(), std::move(file));
+    m_gcodeSender = std::make_unique<GCodeSender>(m_machineCommunicator.get(), m_commandSender.get(), m_wireController.get(), m_statusMonitor.get(), std::move(file));
 
     emit gcodeSenderCreated(m_gcodeSender.get());
 }
