@@ -28,6 +28,8 @@ MachineState MachineStatusMonitor::state() const
 
 void MachineStatusMonitor::machineInitialized()
 {
+    setNewState(MachineState::Unknown);
+
     sendStatusReportQuery();
 
     m_timer.start();

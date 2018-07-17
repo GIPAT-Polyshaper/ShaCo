@@ -43,6 +43,41 @@ GCodeSender::GCodeSender(MachineCommunication* communicator, CommandSender* comm
     connect(m_machineStatusMonitor, &MachineStatusMonitor::stateChanged, this, &GCodeSender::stateChanged);
 }
 
+void GCodeSender::streamData()
+{
+    emit streamingStarted();
+
+    if (!m_device->open(QIODevice::ReadOnly | QIODevice::Text)) {
+        emitStreamingEndedAndReset(StreamEndReason::StreamError, tr("Input device could not be opened"));
+        return;
+    }
+
+    if (m_machineStatusMonitor->state() == MachineState::Idle) {
+        startSendingCommands();
+    }
+}
+
+void GCodeSender::interruptStreaming()
+{
+    emitStreamingEndedAndReset(StreamEndReason::UserInterrupted, tr("User interrupted streaming"));
+}
+
+void GCodeSender::stateChanged(MachineState newState)
+{
+    if (newState == MachineState::Idle) {
+        if (!m_running && !m_startedSendingCommands) {
+            startSendingCommands();
+        } else if (canSuccessfullyFinishStreaming()) {
+            finishStreaming();
+        }
+    } else if (newState == MachineState::Run) {
+        m_running = true;
+    } else if (newState != MachineState::Hold && newState != MachineState::Unknown) {
+        emitStreamingEndedAndReset(StreamEndReason::MachineError,
+                                   tr("Machine changed to unexpected state: ") + machineState2String(newState));
+    }
+}
+
 void GCodeSender::commandSent(CommandCorrelationId)
 {
     readAndSendOneCommand();
@@ -72,43 +107,6 @@ void GCodeSender::replyLost(CommandCorrelationId, bool)
     // This is needed to avoid continuous resets and calls to this function (test hangs)
     if (m_device) {
         emitStreamingEndedAndReset(StreamEndReason::PortError, tr("Failed to get replies for some commands"));
-    }
-}
-
-void GCodeSender::streamData()
-{
-    emit streamingStarted();
-
-    if (!m_device->open(QIODevice::ReadOnly | QIODevice::Text)) {
-        emitStreamingEndedAndReset(StreamEndReason::StreamError, tr("Input device could not be opened"));
-        return;
-    }
-
-    m_communicator->hardReset();
-
-    if (m_machineStatusMonitor->state() == MachineState::Idle) {
-        startSendingCommands();
-    }
-}
-
-void GCodeSender::interruptStreaming()
-{
-    emitStreamingEndedAndReset(StreamEndReason::UserInterrupted, tr("User interrupted streaming"));
-}
-
-void GCodeSender::stateChanged(MachineState newState)
-{
-    if (newState == MachineState::Idle) {
-        if (!m_running && !m_startedSendingCommands) {
-            startSendingCommands();
-        } else if (canSuccessfullyFinishStreaming()) {
-            finishStreaming();
-        }
-    } else if (newState == MachineState::Run) {
-        m_running = true;
-    } else if (newState != MachineState::Hold && newState != MachineState::Unknown) {
-        emitStreamingEndedAndReset(StreamEndReason::MachineError,
-                                   tr("Machine changed to unexpected state: ") + machineState2String(newState));
     }
 }
 

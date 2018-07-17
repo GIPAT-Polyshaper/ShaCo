@@ -31,11 +31,6 @@ public:
 public:
     explicit GCodeSender(MachineCommunication* communicator, CommandSender* commandSender, WireController* wireController, MachineStatusMonitor* machineStatusMonitor, std::unique_ptr<QIODevice>&& gcodeDevice);
 
-    void commandSent(CommandCorrelationId correlationId) override;
-    void okReply(CommandCorrelationId correlationId) override;
-    void errorReply(CommandCorrelationId correlationId, int errorCode) override;
-    void replyLost(CommandCorrelationId correlationId, bool commandSent) override;
-
 public slots:
     void streamData();
     void interruptStreaming();
@@ -50,6 +45,10 @@ private slots:
     void stateChanged(MachineState newState);
 
 private:
+    void commandSent(CommandCorrelationId correlationId) override;
+    void okReply(CommandCorrelationId correlationId) override;
+    void errorReply(CommandCorrelationId correlationId, int errorCode) override;
+    void replyLost(CommandCorrelationId correlationId, bool commandSent) override;
     void readAndSendOneCommand();
     void emitStreamingEndedAndReset(StreamEndReason reason, QString description);
     void startSendingCommands();

@@ -431,10 +431,10 @@ void WireControllerTest::whenMachineInitializedSignalIsReceivedSwitchWireOffAndS
     QCOMPARE(temperatureChangedSpy.at(2).at(0).toFloat(), 14.319f); // Not exactly 14.3f because of approximations
     communicator->hardReset(); // This causes the machineInitialized signal to be sent
 
-    QCOMPARE(dataSentSpy.count(), 9);
-    QCOMPARE(dataSentSpy.at(6).at(0).toByteArray(), "M5\n");
-    QCOMPARE(dataSentSpy.at(7).at(0).toByteArray(), "\x99");
-    QCOMPARE(dataSentSpy.at(8).at(0).toByteArray(), "S14\n");
+    QCOMPARE(dataSentSpy.count(), 10); // one is the hard reset command
+    QCOMPARE(dataSentSpy.at(7).at(0).toByteArray(), "M5\n");
+    QCOMPARE(dataSentSpy.at(8).at(0).toByteArray(), "\x99");
+    QCOMPARE(dataSentSpy.at(9).at(0).toByteArray(), "S14\n");
     QCOMPARE(wireOffSpy.count(), 2);
     QCOMPARE(temperatureChangedSpy.count(), 4);
     QCOMPARE(temperatureChangedSpy.at(3).at(0).toFloat(), 14.319f);

@@ -80,18 +80,17 @@ private Q_SLOTS:
     void setGCodeStreamParentToNull();
     void emitSignalWhenStreamingStarts();
     void emitSignalIfGCodeDeviceCouldNotBeOpenedAndDoAHardReset();
-    void performAnHardResetAtStart();
-    void switchWireOnAfterHardReset();
-    void doNothingAfterHardResetIfGCodeStreamIsEmpty();
+    void switchWireOnBeforeStart();
+    void doNothingAtStartIfGCodeStreamIsEmpty();
     void immediatelyEmitStreamEndedIfGCodeStreamIsEmpty();
     void sendSingleCommandAndStopIfGCodeStreamIsMadeUpOfOneCommandOnly();
     void openStreamAsText();
-    void endStreamingWithErrorAndSwitchWireOffIfAttemptingToSendAnInvalidCommand();
+    void endStreamingWithErrorIfAttemptingToSendAnInvalidCommand();
     void sendAllCommandsAndStopIfGCodeIsShort();
     void stopEnqueingCommandsIfMoreThan10ArePending();
     void doNotEmitStreamingEndedIfThereArePendingCommands();
     void emitStreamingEndedSignalWithErrorAndResetIfItIsNotPossibleToReadTheGCodeStream();
-    void doNotStartAfterHardResetIfMachineIsNotIdle();
+    void doNotStartIfMachineIsNotIdle();
     void emitStreamingEndedSignalWithSuccessOnlyAfterAllRepliesAreReceivedAndMachineIsIdleAgain();
     void keepWaitingForAcksIfMachineGoesIdlePrematurely();
     void emitStreamingEndedSignalWithErrorAndResetIfMachineRepliesWithError();
@@ -180,21 +179,7 @@ void GCodeSenderTest::emitSignalIfGCodeDeviceCouldNotBeOpenedAndDoAHardReset()
     QCOMPARE(initializationSpy.count(), 1);
 }
 
-void GCodeSenderTest::performAnHardResetAtStart()
-{
-    auto r = createRequirements();
-
-    auto buffer = new TestBuffer();
-    GCodeSender fileSender(r.communicator.get(), r.commandSender.get(), r.wireController.get(), r.statusMonitor.get(), std::unique_ptr<QIODevice>(buffer));
-
-    QSignalSpy spy(r.communicator.get(), &MachineCommunication::machineInitialized);
-
-    fileSender.streamData();
-
-    QCOMPARE(spy.count(), 1);
-}
-
-void GCodeSenderTest::switchWireOnAfterHardReset()
+void GCodeSenderTest::switchWireOnBeforeStart()
 {
     auto r = createRequirements();
 
@@ -205,12 +190,11 @@ void GCodeSenderTest::switchWireOnAfterHardReset()
     QSignalSpy spy(r.communicator.get(), &MachineCommunication::dataSent);
 
     fileSender.streamData();
-
-    QVERIFY(spy.count() >= 5); // First 4 are temeperature set, wire off and status query after hard reset
-    QCOMPARE(spy.at(4).at(0).toByteArray(), "M3\n");
+    QCOMPARE(spy.count(), 2); // Wire on and then command
+    QCOMPARE(spy.at(0).at(0).toByteArray(), "M3\n");
 }
 
-void GCodeSenderTest::doNothingAfterHardResetIfGCodeStreamIsEmpty()
+void GCodeSenderTest::doNothingAtStartIfGCodeStreamIsEmpty()
 {
     auto r = createRequirements();
 
@@ -220,8 +204,7 @@ void GCodeSenderTest::doNothingAfterHardResetIfGCodeStreamIsEmpty()
     QSignalSpy spy(r.communicator.get(), &MachineCommunication::dataSent);
 
     fileSender.streamData();
-
-    QCOMPARE(spy.count(), 4); // Does not send wire on and off
+    QCOMPARE(spy.count(), 0);
 }
 
 void GCodeSenderTest::immediatelyEmitStreamEndedIfGCodeStreamIsEmpty()
@@ -258,8 +241,10 @@ void GCodeSenderTest::sendSingleCommandAndStopIfGCodeStreamIsMadeUpOfOneCommandO
     sendAcks(r.serialPort, 4);
     sendState(r.serialPort, "Idle");
 
-    QCOMPARE(dataSentSpy.count(), 7); // 5 are inital commands sent after hard reset and the last is wire off
-    QCOMPARE(dataSentSpy.at(5).at(0).toByteArray(), "G01 X100\n");
+    QCOMPARE(dataSentSpy.count(), 3);
+    QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "M3\n");
+    QCOMPARE(dataSentSpy.at(1).at(0).toByteArray(), "G01 X100\n");
+    QCOMPARE(dataSentSpy.at(2).at(0).toByteArray(), "M5\n");
 
     QCOMPARE(endSpy.count(), 1);
     QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::Completed);
@@ -278,11 +263,11 @@ void GCodeSenderTest::openStreamAsText()
 
     fileSender.streamData();
 
-    QVERIFY(spy.count() > 5); // 5 are inital commands sent after hard reset and the last is wire off
-    QCOMPARE(spy.at(5).at(0).toByteArray(), "G01 X100\n");
+    QVERIFY(spy.count() > 1);
+    QCOMPARE(spy.at(1).at(0).toByteArray(), "G01 X100\n");
 }
 
-void GCodeSenderTest::endStreamingWithErrorAndSwitchWireOffIfAttemptingToSendAnInvalidCommand()
+void GCodeSenderTest::endStreamingWithErrorIfAttemptingToSendAnInvalidCommand()
 {
     auto r = createRequirements();
 
@@ -296,14 +281,13 @@ void GCodeSenderTest::endStreamingWithErrorAndSwitchWireOffIfAttemptingToSendAnI
 
     fileSender.streamData();
 
-    QVERIFY(dataSentSpy.count() > 5); // 5 are inital commands sent after hard reset and the last is wire off
-    QCOMPARE(dataSentSpy.at(5).at(0).toByteArray(), "M5\n");
+    QVERIFY(dataSentSpy.count() > 1); // The initial wire on then commands after the hard reset
 
     QCOMPARE(endSpy.count(), 1);
     QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::StreamError);
     QCOMPARE(endSpy.at(0).at(1).toString(), tr("Invalid command in GCode stream"));
 
-    QCOMPARE(initializationSpy.count(), 2); // The initial one and the one because of the error
+    QCOMPARE(initializationSpy.count(), 1);
 }
 
 void GCodeSenderTest::sendAllCommandsAndStopIfGCodeIsShort()
@@ -321,13 +305,13 @@ void GCodeSenderTest::sendAllCommandsAndStopIfGCodeIsShort()
 
     // Run and then Idle
     sendState(r.serialPort, "Run");
-    sendAcks(r.serialPort, 6);
+    sendAcks(r.serialPort, 5);
     sendState(r.serialPort, "Idle");
 
-    QCOMPARE(dataSentSpy.count(), 9); // 5 are inital commands sent after hard reset and the last is wire off
-    QCOMPARE(dataSentSpy.at(5).at(0).toByteArray(), "G01 X100\n");
-    QCOMPARE(dataSentSpy.at(6).at(0).toByteArray(), "G01 Y32\n");
-    QCOMPARE(dataSentSpy.at(7).at(0).toByteArray(), "G01 Z123\n");
+    QCOMPARE(dataSentSpy.count(), 5);
+    QCOMPARE(dataSentSpy.at(1).at(0).toByteArray(), "G01 X100\n");
+    QCOMPARE(dataSentSpy.at(2).at(0).toByteArray(), "G01 Y32\n");
+    QCOMPARE(dataSentSpy.at(3).at(0).toByteArray(), "G01 Z123\n");
 
     QCOMPARE(endSpy.count(), 1);
     QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::Completed);
@@ -386,10 +370,10 @@ void GCodeSenderTest::emitStreamingEndedSignalWithErrorAndResetIfItIsNotPossible
     QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::StreamError);
     QCOMPARE(endSpy.at(0).at(1).toString(), tr("Could not read GCode line from input device"));
 
-    QCOMPARE(initializationSpy.count(), 2); // The initial one and the one because of the error
+    QCOMPARE(initializationSpy.count(), 1);
 }
 
-void GCodeSenderTest::doNotStartAfterHardResetIfMachineIsNotIdle()
+void GCodeSenderTest::doNotStartIfMachineIsNotIdle()
 {
     auto r = createRequirements(false);
 
@@ -402,14 +386,14 @@ void GCodeSenderTest::doNotStartAfterHardResetIfMachineIsNotIdle()
 
     fileSender.streamData();
 
-    QCOMPARE(dataSentSpy.count(), 4); // commands sent after hard reset
+    QCOMPARE(dataSentSpy.count(), 0);
 
     // Now machine goes Idle and streaming starts
     sendState(r.serialPort, "Idle");
 
-    QCOMPARE(dataSentSpy.count(), 6);
-    QCOMPARE(dataSentSpy.at(4).at(0).toByteArray(), "M3\n");
-    QCOMPARE(dataSentSpy.at(5).at(0).toByteArray(), "G01 X100\n");
+    QCOMPARE(dataSentSpy.count(), 2);
+    QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "M3\n");
+    QCOMPARE(dataSentSpy.at(1).at(0).toByteArray(), "G01 X100\n");
 }
 
 void GCodeSenderTest::emitStreamingEndedSignalWithSuccessOnlyAfterAllRepliesAreReceivedAndMachineIsIdleAgain()
@@ -428,13 +412,13 @@ void GCodeSenderTest::emitStreamingEndedSignalWithSuccessOnlyAfterAllRepliesAreR
     // Now machine goes in Run state
     sendState(r.serialPort, "Run");
 
-    QCOMPARE(dataSentSpy.count(), 6);
+    QCOMPARE(dataSentSpy.count(), 2);
 
     // No end signal
     QCOMPARE(endSpy.count(), 0);
 
     // Replies
-    sendAcks(r.serialPort, 4);
+    sendAcks(r.serialPort, 2);
 
     // No end signal, waiting to go idle
     QCOMPARE(endSpy.count(), 0);
@@ -463,7 +447,7 @@ void GCodeSenderTest::keepWaitingForAcksIfMachineGoesIdlePrematurely()
     // Now machine goes in Run state
     sendState(r.serialPort, "Run");
 
-    QCOMPARE(dataSentSpy.count(), 6);
+    QCOMPARE(dataSentSpy.count(), 2);
 
     // No end signal
     QCOMPARE(endSpy.count(), 0);
@@ -475,7 +459,7 @@ void GCodeSenderTest::keepWaitingForAcksIfMachineGoesIdlePrematurely()
     QCOMPARE(endSpy.count(), 0);
 
     // Replies
-    sendAcks(r.serialPort, 4);
+    sendAcks(r.serialPort, 2);
 
     QCOMPARE(endSpy.count(), 1);
     QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::Completed);
@@ -495,15 +479,15 @@ void GCodeSenderTest::emitStreamingEndedSignalWithErrorAndResetIfMachineRepliesW
 
     fileSender.streamData();
 
-    // acks for initial commands, then error for our command
-    sendAcks(r.serialPort, 3);
+    // ack for initial wire on commands, then error for our command
+    sendAcks(r.serialPort, 1);
     r.serialPort->simulateReceivedData("error:17\r\n");
 
     QCOMPARE(endSpy.count(), 1);
     QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::MachineError);
     QCOMPARE(endSpy.at(0).at(1).toString(), tr("Firmware replied with error:") + "17");
 
-    QCOMPARE(initializationSpy.count(), 2); // The initial one and the one because of the error
+    QCOMPARE(initializationSpy.count(), 1);
 }
 
 void GCodeSenderTest::doNotRestartIfStateGoesFromIdleToAnotherOneNotRunAndThenBackToIdle()
@@ -551,7 +535,7 @@ void GCodeSenderTest::emitStreamingEndedSignalWithErrorAndResetIfMachineGoesInUn
     QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::MachineError);
     QCOMPARE(endSpy.at(0).at(1).toString(), tr("Machine changed to unexpected state: ") + "Alarm");
 
-    QCOMPARE(initializationSpy.count(), 2); // The initial one and the one because of the error
+    QCOMPARE(initializationSpy.count(), 1);
 }
 
 void GCodeSenderTest::emitStreamingEndedSignalWithErrorAndResetIfMessageRepliesAreLost()
@@ -574,7 +558,7 @@ void GCodeSenderTest::emitStreamingEndedSignalWithErrorAndResetIfMessageRepliesA
     QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::PortError);
     QCOMPARE(endSpy.at(0).at(1).toString(), tr("Failed to get replies for some commands"));
 
-    QCOMPARE(initializationSpy.count(), 2); // The initial one and the one because of the error
+    QCOMPARE(initializationSpy.count(), 1);
 }
 
 void GCodeSenderTest::emitStreamingEndedSignalWithErrorAndResetIfUserInterruptStreaming()
@@ -597,7 +581,7 @@ void GCodeSenderTest::emitStreamingEndedSignalWithErrorAndResetIfUserInterruptSt
     QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::UserInterrupted);
     QCOMPARE(endSpy.at(0).at(1).toString(), tr("User interrupted streaming"));
 
-    QCOMPARE(initializationSpy.count(), 2); // The initial one and the one because of the error
+    QCOMPARE(initializationSpy.count(), 1);
 }
 
 QTEST_GUILESS_MAIN(GCodeSenderTest)

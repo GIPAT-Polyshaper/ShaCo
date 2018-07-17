@@ -724,12 +724,12 @@ void CommandSenderTest::resetStateWhenMachineInitialized()
     }
     sender.sendCommand("new one\n");
 
-    QCOMPARE(spy.count(), 32);
+    QCOMPARE(spy.count(), 33); // index 16 is the hard reset command
 
     // send one reply and expect one more command sent (the new one)
     serialPort->simulateReceivedData("ok\r\n");
-    QCOMPARE(spy.count(), 33);
-    QCOMPARE(spy.at(32).at(0).toByteArray(), "new one\n");
+    QCOMPARE(spy.count(), 34);
+    QCOMPARE(spy.at(33).at(0).toByteArray(), "new one\n");
 
     // Non-null listeners are called
     for (auto i = 0; i < 19; ++i) {

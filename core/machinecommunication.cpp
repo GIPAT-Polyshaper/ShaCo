@@ -5,6 +5,7 @@ namespace {
     const char feedHoldCommand = '!';
     const char resumeFeedHoldCommand = '~';
     const char softResetCommand = 0x18;
+    const char hardResetCommand = 0xC0;
 }
 
 MachineCommunication::MachineCommunication(int hardResetDelay)
@@ -70,8 +71,7 @@ void MachineCommunication::softReset()
 
 void MachineCommunication::hardReset()
 {
-    m_serialPort->close();
-    m_serialPort->open();
+    writeData(QByteArray(1, hardResetCommand));
 
     // This is needed to give the machine time to start
     QThread::msleep(m_hardResetDelay);
