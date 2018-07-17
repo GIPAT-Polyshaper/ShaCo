@@ -6,6 +6,7 @@
 #include "machinecommunication.h"
 #include "machinestate.h"
 
+// TODO-TOMMY As this continuously asks for machine state, we might use this class to signal when the machien stops responding (e.g. if we don't get any reply for more than X seconds). We should also check for eroors when sending (especially after we implement a class like CommandSender for immeidate commands
 class MachineStatusMonitor : public QObject
 {
     Q_OBJECT

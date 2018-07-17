@@ -4,11 +4,13 @@
 #include <QRegularExpression>
 #include <QString>
 #include <QThread>
+#include <QTime>
 
 namespace {
-    constexpr int grblBufferSize = 128;
-    const QRegularExpression okRegExpr("^ok$", QRegularExpression::OptimizeOnFirstUsageOption);
-    const QRegularExpression errorRegExpr("^error:([0-9]+)$", QRegularExpression::OptimizeOnFirstUsageOption);
+    // This is the maximum allowed number commands to send in commandSender
+    constexpr int maxQueuedToSendCommands = 10;
+    // This is only to avoid exhausting memory for large wrong files
+    constexpr int maxBytesInLine = 1000;
 
     bool registerStreamEndReason()
     {
@@ -26,21 +28,18 @@ namespace {
 
 const bool GCodeSender::streamEndReasonRegistered = registerStreamEndReason();
 
-GCodeSender::GCodeSender(int hardResetDelay, int idleWaitInterval, MachineCommunication* communicator, WireController* wireController, MachineStatusMonitor *machineStatusMonitor, std::unique_ptr<QIODevice>&& gcodeDevice)
-    : QObject(nullptr)
-    , m_hardResetDelay(hardResetDelay)
-    , m_idleWaitInterval(idleWaitInterval)
-    , m_communicator(communicator)
+GCodeSender::GCodeSender(MachineCommunication* communicator, CommandSender* commandSender, WireController* wireController, MachineStatusMonitor *machineStatusMonitor, std::unique_ptr<QIODevice>&& gcodeDevice)
+    : m_communicator(communicator)
+    , m_commandSender(commandSender)
     , m_wireController(wireController)
     , m_machineStatusMonitor(machineStatusMonitor)
     , m_device(std::move(gcodeDevice))
-    , m_streamEndReason(StreamEndReason::Completed)
+    , m_running(false)
+    , m_expectedAcks(0)
+    , m_startedSendingCommands(false)
 {
     m_device->setParent(nullptr);
 
-    connect(m_communicator, &MachineCommunication::portClosedWithError, this, &GCodeSender::portClosedWithError);
-    connect(m_communicator, &MachineCommunication::portClosed, this, &GCodeSender::portClosed);
-    connect(m_communicator, &MachineCommunication::messageReceived, this, &GCodeSender::messageReceived);
     connect(m_machineStatusMonitor, &MachineStatusMonitor::stateChanged, this, &GCodeSender::stateChanged);
 }
 
@@ -48,150 +47,119 @@ void GCodeSender::streamData()
 {
     emit streamingStarted();
 
-    if (!m_device) {
-        emitStreamingEnded();
-        return;
-    } else if (!m_device->open(QIODevice::ReadOnly | QIODevice::Text)) {
-        closeStream(StreamEndReason::StreamError, tr("Input device could not be opened"));
-        emitStreamingEnded();
+    if (!m_device->open(QIODevice::ReadOnly | QIODevice::Text)) {
+        emitStreamingEndedAndReset(StreamEndReason::StreamError, tr("Input device could not be opened"));
         return;
     }
 
-    // This works because all connection are synchronous (i.e. function calls), we can send data
-    // only after port has been really opened
-    m_communicator->hardReset();
-
-    // This is to make sure replies to commands sent by wireController after hard reset are received
-    // before we start sending data, and are then not considered answers to streamed g-code
-    QThread::msleep(m_hardResetDelay);
-    QCoreApplication::processEvents();
-
-    // Switching wire on at start
-    m_wireController->switchWireOn();
-    m_sentBytes.enqueue(m_wireController->switchWireOnCommandLength());
-
-    while (m_device && !m_device->atEnd()) {
-        auto line = m_device->readLine(grblBufferSize - 1);
-
-        // NOTE: Inability to read a line is considered an error (we check above that the device is
-        // not atEnd)
-        if (line.isEmpty()) {
-            closeStream(StreamEndReason::StreamError, tr("Could not read GCode line from input device"));
-            break;
-        }
-
-        if (!line.endsWith('\n')) {
-            line += '\n';
-        }
-
-        waitWhileBufferFull(line.size());
-        m_communicator->writeData(line);
-        m_sentBytes.enqueue(line.size());
-
-        // Process QT events
-        QCoreApplication::processEvents();
+    if (m_machineStatusMonitor->state() == MachineState::Idle) {
+        startSendingCommands();
     }
-
-    // Switching wire off at the end (if device is closed we either lost machine communication or
-    // machine was hard reset)
-    if (m_device) {
-        waitWhileBufferFull(m_wireController->switchWireOffCommandLength());
-        m_wireController->switchWireOff();
-        m_sentBytes.enqueue(m_wireController->switchWireOffCommandLength());
-    }
-
-    QThread::msleep(m_idleWaitInterval);
-
-    // Waiting remaining acks and for machine to go Idle
-    while (m_device && (m_machineStatusMonitor->state() != MachineState::Idle || !m_sentBytes.isEmpty())) {
-        processEvents();
-    }
-
-    if (m_device) {
-        closeStream(StreamEndReason::Completed, tr("Success"));
-    }
-
-    emitStreamingEnded();
 }
 
 void GCodeSender::interruptStreaming()
 {
-    closeStream(StreamEndReason::UserInterrupted, tr("Streaming interrupted by the user"));
-}
-
-void GCodeSender::portClosedWithError()
-{
-    closeStream(StreamEndReason::PortError, tr("Serial port closed with error"));
-}
-
-void GCodeSender::portClosed()
-{
-    closeStream(StreamEndReason::PortClosed, tr("Serial port closed"));
-}
-
-void GCodeSender::messageReceived(QByteArray message)
-{
-    if (okRegExpr.match(message).hasMatch()) {
-        if (!m_sentBytes.isEmpty()) {
-            m_sentBytes.dequeue();
-        }
-    } else {
-        auto match = errorRegExpr.match(message);
-        if (match.hasMatch()) {
-            closeStream(StreamEndReason::MachineErrorReply, tr("Firmware replied with error: ") + match.captured(1));
-        }
-    }
+    emitStreamingEndedAndReset(StreamEndReason::UserInterrupted, tr("User interrupted streaming"));
 }
 
 void GCodeSender::stateChanged(MachineState newState)
 {
-    if (newState != MachineState::Idle && newState != MachineState::Run &&
-            newState != MachineState::Hold && newState != MachineState::Unknown) {
-        closeStream(StreamEndReason::MachineErrorReply,
-                    tr("Machine changed to unexpected state: ") + machineState2String(newState));
+    if (newState == MachineState::Idle) {
+        if (!m_running && !m_startedSendingCommands) {
+            startSendingCommands();
+        } else if (canSuccessfullyFinishStreaming()) {
+            finishStreaming();
+        }
+    } else if (newState == MachineState::Run) {
+        m_running = true;
+    } else if (newState != MachineState::Hold && newState != MachineState::Unknown) {
+        emitStreamingEndedAndReset(StreamEndReason::MachineError,
+                                   tr("Machine changed to unexpected state: ") + machineState2String(newState));
     }
 }
 
-void GCodeSender::closeStream(GCodeSender::StreamEndReason reason, QString description)
+void GCodeSender::commandSent(CommandCorrelationId)
 {
-    // For some StreamEndResons we also send a hard reset
-    switch (reason) {
-        case StreamEndReason::MachineErrorReply:
-        case StreamEndReason::StreamError:
-        case StreamEndReason::UserInterrupted:
-            m_communicator->hardReset();
-            break;
-        default:
-            break;
-    }
+    readAndSendOneCommand();
 
+    while (!m_device->atEnd() && m_commandSender->pendingCommands() <= maxQueuedToSendCommands) {
+        readAndSendOneCommand();
+    }
+}
+
+void GCodeSender::okReply(CommandCorrelationId)
+{
+    --m_expectedAcks;
+
+    if (canSuccessfullyFinishStreaming()) {
+        finishStreaming();
+    }
+}
+
+void GCodeSender::errorReply(CommandCorrelationId, int errorCode)
+{
+    emitStreamingEndedAndReset(StreamEndReason::MachineError,
+                               tr("Firmware replied with error:") + QString::number(errorCode));
+}
+
+void GCodeSender::replyLost(CommandCorrelationId, bool)
+{
+    // This is needed to avoid continuous resets and calls to this function (test hangs)
+    if (m_device) {
+        emitStreamingEndedAndReset(StreamEndReason::PortError, tr("Failed to get replies for some commands"));
+    }
+}
+
+void GCodeSender::readAndSendOneCommand()
+{
+    if (m_device && !m_device->atEnd()) {
+        auto line = m_device->readLine(maxBytesInLine);
+        if (line.isEmpty()) {
+            emitStreamingEndedAndReset(StreamEndReason::StreamError, tr("Could not read GCode line from input device"));
+        } else if (!m_commandSender->sendCommand(line, 0, this)) {
+            emitStreamingEndedAndReset(StreamEndReason::StreamError, tr("Invalid command in GCode stream"));
+        } else {
+            ++m_expectedAcks;
+        }
+    }
+}
+
+void GCodeSender::emitStreamingEndedAndReset(StreamEndReason reason, QString description)
+{
     m_device.reset();
-    m_streamEndReason = reason;
-    m_streamEndDescription = description;
+    emit streamingEnded(reason, description);
+    m_communicator->hardReset();
 }
 
-int GCodeSender::bytesSentSinceLastAck() const
+void GCodeSender::startSendingCommands()
 {
-    return std::accumulate(m_sentBytes.constBegin(), m_sentBytes.constEnd(), 0);
-}
+    m_startedSendingCommands = true;
 
-void GCodeSender::waitWhileBufferFull(int requiredSpace)
-{
-    // Processing QT events while waiting for firmware buffer to find space
-    while (m_device && bytesSentSinceLastAck() + requiredSpace > grblBufferSize) {
-        processEvents();
+    if (m_device->atEnd()) {
+        // Empty stream, closing here
+        emit streamingEnded(StreamEndReason::Completed, tr("Success"));
+        return;
+    }
+
+    m_wireController->switchWireOn();
+
+    // Will send other commands in the commandSent callback
+    readAndSendOneCommand();
+
+    if (canSuccessfullyFinishStreaming()) {
+        finishStreaming();
     }
 }
 
-void GCodeSender::emitStreamingEnded()
+void GCodeSender::finishStreaming()
 {
-    emit streamingEnded(m_streamEndReason, m_streamEndDescription);
+    m_wireController->switchWireOff();
+    m_device.reset(); // This is not tested (removing just to release resources, not strictly necessary)
+    emit streamingEnded(StreamEndReason::Completed, tr("Success"));
 }
 
-void GCodeSender::processEvents()
+bool GCodeSender::canSuccessfullyFinishStreaming() const
 {
-    QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
-
-    // Small delay, to avoid consuming too much cpu
-    QThread::usleep(500);
+    return m_device && m_device->atEnd() && m_running && m_expectedAcks == 0 &&
+            m_machineStatusMonitor->state() == MachineState::Idle;
 }

@@ -5,6 +5,7 @@
 #include <memory>
 #include <QList>
 #include <QObject>
+#include <QList>
 #include <QSerialPort>
 #include <QTimer>
 #include <QtDebug>
@@ -42,17 +43,21 @@ public:
     using SerialPortFactoryT = std::function<std::unique_ptr<SerialPortInterface>(SerialPortInfo)>;
 
 public:
-    PortDiscovery(PortListingFuncT portListingFunc, SerialPortFactoryT serialPortFactory, int scanDelayMillis, int maxReadAttemptsPerPort)
+    // scanDelayMillis is how much to wait between two consecutive scans in milliseconds,
+    // portReadInterval is for how long to attempt to read from a possibly matching port in
+    // milliseconds and maxReadAttemptsPerPort is how many attempts to do before moving to another
+    // port
+    PortDiscovery(PortListingFuncT portListingFunc, SerialPortFactoryT serialPortFactory, int scanDelayMillis, int portPollInterval, int maxReadAttemptsPerPort)
         : AbstractPortDiscovery()
         , m_portListingFunc(portListingFunc)
         , m_serialPortFactory(serialPortFactory)
         , m_scanDelayMillis(scanDelayMillis)
+        , m_portPollInterval(portPollInterval)
         , m_maxReadAttemptsPerPort(maxReadAttemptsPerPort)
-        , m_timer(new QTimer(this))
-        , m_serialPort()
+        , m_currentPortAttempt(0)
     {
-        m_timer->setSingleShot(true);
-        connect(m_timer, &QTimer::timeout, this, &PortDiscovery::searchPort);
+        m_timer.setSingleShot(true);
+        connect(&m_timer, &QTimer::timeout, this, &PortDiscovery::timeout);
     }
 
     void start() override
@@ -66,31 +71,76 @@ public:
     // Port is moved, calls following the first one return a null port
     std::unique_ptr<SerialPortInterface> obtainPort() override
     {
+        m_serialPort->disconnect(this);
         return std::move(m_serialPort);
     }
 
 private:
+    void timeout()
+    {
+        if (m_serialPort) {
+            askFirmwareVersion();
+        } else {
+            searchPort();
+        }
+    }
+
     void searchPort()
     {
-        bool scheduleNextScan = true;
+        rescanIfNeeded();
 
-        for (const auto& p: m_portListingFunc()) {
+        bool candidateFound = false;
+        while (!m_portsQueue.isEmpty() && !candidateFound) {
+            auto p = m_portsQueue.takeFirst();
+
             if (vendorAndProductMatch(p)) {
                 qDebug() << "Found a port with matching vendor and product identifier";
-                auto serialPort = m_serialPortFactory(p);
-                auto machine = getMachineInfo(serialPort.get());
+                m_serialPort = m_serialPortFactory(p);
+                connect(m_serialPort.get(), &SerialPortInterface::dataAvailable,
+                        this, &PortDiscovery<SerialPortInfo>::dataAvailable);
+                m_serialPort->open();
+                askFirmwareVersion();
 
-                if (machine.isValid()) {
-                    m_serialPort = std::move(serialPort);
-                    emit portFound(machine, this);
-                    scheduleNextScan = false;
-                    break;
-                }
+                candidateFound = true;
+                break;
             }
         }
 
-        if (scheduleNextScan) {
-            m_timer->start(m_scanDelayMillis);
+        if (!candidateFound) {
+            m_timer.start(m_scanDelayMillis);
+        }
+    }
+
+    void rescanIfNeeded()
+    {
+        if (m_portsQueue.isEmpty()) {
+            m_portsQueue = m_portListingFunc();
+        }
+    }
+
+    void askFirmwareVersion()
+    {
+        m_currentPortAttempt++;
+
+        if (m_currentPortAttempt > m_maxReadAttemptsPerPort) {
+            // Failure with this port, close and wait
+            moveToNextPortOrScheduleRescan();
+        } else {
+            m_serialPort->write("$I\n");
+            m_timer.start(m_portPollInterval);
+        }
+    }
+
+    void moveToNextPortOrScheduleRescan()
+    {
+        m_serialPort.reset();
+        m_currentPortAttempt = 0;
+        m_receivedData.clear();
+
+        if (m_portsQueue.isEmpty()) {
+            m_timer.start(m_scanDelayMillis);
+        } else {
+            searchPort();
         }
     }
 
@@ -99,27 +149,28 @@ private:
         return p.vendorIdentifier() == 0x2341 && p.productIdentifier() == 0x0043;
     }
 
-    MachineInfo getMachineInfo(SerialPortInterface* p)
+    void dataAvailable()
     {
-        QByteArray answer;
-        p->open();
-        p->write("$I\n");
+        m_receivedData += m_serialPort->readAll();
+        qDebug() << "Message received from machine:" << m_receivedData;
 
-        for (int i = 0; i < m_maxReadAttemptsPerPort && !answer.endsWith("ok\r\n"); ++i) {
-            auto partial = p->read(100, 1000);
-            answer.append(partial);
+        auto info = MachineInfo::createFromString(m_receivedData);
+        if (info.isValid()) {
+            emit portFound(info, this);
+            m_timer.stop();
         }
-
-        qDebug() << "machine answer: " << answer;
-        return MachineInfo::createFromString(answer);
     }
 
     const PortListingFuncT m_portListingFunc;
     const SerialPortFactoryT m_serialPortFactory;
     const int m_scanDelayMillis;
+    const int m_portPollInterval;
     const int m_maxReadAttemptsPerPort;
-    QTimer* const m_timer;
+    QTimer m_timer;
     std::unique_ptr<SerialPortInterface> m_serialPort;
+    QByteArray m_receivedData;
+    int m_currentPortAttempt;
+    QList<SerialPortInfo> m_portsQueue;
 };
 
 #endif // PORTDISCOVERY_H

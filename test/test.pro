@@ -7,7 +7,8 @@ SUBDIRS = \
     testcommon \
     wirecontroller \
     machinestate \
-    machinestatusmonitor
+    machinestatusmonitor \
+    commandsender
 
 portdiscovery.depends = testcommon
 machineinfo.depends = testcommon

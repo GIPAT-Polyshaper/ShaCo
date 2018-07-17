@@ -281,9 +281,6 @@ void MachineCommunicationTest::doHardResetWhenAskedTo()
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
 
-    QSignalSpy portOpenedSpy(serialPort, &TestSerialPort::portOpened);
-    QSignalSpy portClosedSpy(serialPort, &TestSerialPort::portClosed);
-
     MachineCommunication communicator(2000);
 
     QSignalSpy machineInitializedSpy(&communicator, &MachineCommunication::machineInitialized);
@@ -297,8 +294,7 @@ void MachineCommunicationTest::doHardResetWhenAskedTo()
     const auto elapsed = timer.elapsed();
 
     QVERIFY(elapsed > 1950);
-    QCOMPARE(portOpenedSpy.count(), 1);
-    QCOMPARE(portClosedSpy.count(), 1);
+    QCOMPARE(serialPort->writtenData(), "\xC0");
     QCOMPARE(machineInitializedSpy.count(), 2);
 }
 

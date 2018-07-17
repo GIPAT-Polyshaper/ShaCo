@@ -4,6 +4,7 @@
 #include <memory>
 #include <QThread>
 #include <QUrl>
+#include "core/commandsender.h"
 #include "core/gcodesender.h"
 #include "core/machinecommunication.h"
 #include "core/machineinfo.h"
@@ -45,6 +46,7 @@ public:
 
     PortDiscovery<QSerialPortInfo>* portDiscoverer() const;
     MachineCommunication* machineCommunicator() const;
+    CommandSender* commandSender() const;
     WireController* wireController() const;
     MachineStatusMonitor* statusMonitor() const;
     GCodeSender* gcodeSender() const;
@@ -58,6 +60,7 @@ signals:
 private:
     std::unique_ptr<PortDiscovery<QSerialPortInfo>> m_portDiscoverer;
     std::unique_ptr<MachineCommunication> m_machineCommunicator;
+    std::unique_ptr<CommandSender> m_commandSender;
     std::unique_ptr<WireController> m_wireController;
     std::unique_ptr<MachineStatusMonitor> m_statusMonitor;
     std::unique_ptr<GCodeSender> m_gcodeSender;

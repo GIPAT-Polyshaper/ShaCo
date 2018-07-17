@@ -23,6 +23,7 @@ private Q_SLOTS:
     void emitStateChangedSignalIfStatusChangesToOtherStates();
     void resetStateToUnknownWhenPortClosed();
     void resetStateToUnknownWhenPortClosedWithError();
+    void resetStateToUnknownWhenMachineIsInitialized();
 };
 
 MachineStatusMonitorTest::MachineStatusMonitorTest()
@@ -33,7 +34,7 @@ void MachineStatusMonitorTest::sendStatusReportQueryCommandWhenMachineIsInitiali
 {
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
-    auto communicator = std::make_unique<MachineCommunication>();
+    auto communicator = std::make_unique<MachineCommunication>(1000);
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
 
@@ -51,7 +52,7 @@ void MachineStatusMonitorTest::periodicallySendStatusReportQueryCommand()
 {
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
-    auto communicator = std::make_unique<MachineCommunication>();
+    auto communicator = std::make_unique<MachineCommunication>(1000);
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
 
@@ -195,6 +196,29 @@ void MachineStatusMonitorTest::resetStateToUnknownWhenPortClosedWithError()
     QCOMPARE(statusMonitor.state(), MachineState::Idle);
 
     communicator->closePortWithError("Error!");
+
+    QCOMPARE(spy.count(), 2);
+    QCOMPARE(spy.at(1).at(0).value<MachineState>(), MachineState::Unknown);
+    QCOMPARE(statusMonitor.state(), MachineState::Unknown);
+}
+
+void MachineStatusMonitorTest::resetStateToUnknownWhenMachineIsInitialized()
+{
+    auto communicatorAndPort = createCommunicator();
+    auto communicator = std::move(communicatorAndPort.first);
+    auto serialPort = communicatorAndPort.second;
+
+    MachineStatusMonitor statusMonitor(500, communicator.get());
+
+    QSignalSpy spy(&statusMonitor, &MachineStatusMonitor::stateChanged);
+
+    serialPort->simulateReceivedData("<Idle|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
+
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.at(0).at(0).value<MachineState>(), MachineState::Idle);
+    QCOMPARE(statusMonitor.state(), MachineState::Idle);
+
+    communicator->hardReset();
 
     QCOMPARE(spy.count(), 2);
     QCOMPARE(spy.at(1).at(0).value<MachineState>(), MachineState::Unknown);

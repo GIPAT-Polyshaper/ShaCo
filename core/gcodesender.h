@@ -6,11 +6,13 @@
 #include <QObject>
 #include <QQueue>
 #include <QString>
+#include "commandsender.h"
 #include "machinecommunication.h"
 #include "machinestatusmonitor.h"
 #include "wirecontroller.h"
 
-class GCodeSender : public QObject
+// This is meant to be used only once: do not restart streaming when it ends
+class GCodeSender : public CommandSenderListener
 {
     Q_OBJECT
 
@@ -21,18 +23,13 @@ public:
     enum class StreamEndReason {
         Completed,
         UserInterrupted,
-        PortClosed,
         PortError,
         StreamError,
-        MachineErrorReply
+        MachineError
     };
 
 public:
-    // hardResetDelay is how much to wait at start after the hard reset (see
-    // waitSomeTimeAtStartAfterHardReset test). Value is in milliseconds
-    // idleWaitInterval is how much to wait at the end before starting to check that machine is idle
-    // (see waitSomeTimeAtTheEndBeforeCheckingMachineIsIdle test). Value is in milliseconds
-    explicit GCodeSender(int hardResetDelay, int idleWaitInterval, MachineCommunication* communicator, WireController* wireController, MachineStatusMonitor* machineStatusMonitor, std::unique_ptr<QIODevice>&& gcodeDevice);
+    explicit GCodeSender(MachineCommunication* communicator, CommandSender* commandSender, WireController* wireController, MachineStatusMonitor* machineStatusMonitor, std::unique_ptr<QIODevice>&& gcodeDevice);
 
 public slots:
     void streamData();
@@ -45,27 +42,27 @@ signals:
     void streamingEnded(GCodeSender::StreamEndReason reason, QString description);
 
 private slots:
-    void portClosedWithError();
-    void portClosed();
-    void messageReceived(QByteArray message);
     void stateChanged(MachineState newState);
 
 private:
-    void closeStream(GCodeSender::StreamEndReason reason, QString description);
-    int bytesSentSinceLastAck() const;
-    void waitWhileBufferFull(int requiredSpace);
-    void emitStreamingEnded();
-    void processEvents();
+    void commandSent(CommandCorrelationId correlationId) override;
+    void okReply(CommandCorrelationId correlationId) override;
+    void errorReply(CommandCorrelationId correlationId, int errorCode) override;
+    void replyLost(CommandCorrelationId correlationId, bool commandSent) override;
+    void readAndSendOneCommand();
+    void emitStreamingEndedAndReset(StreamEndReason reason, QString description);
+    void startSendingCommands();
+    void finishStreaming();
+    bool canSuccessfullyFinishStreaming() const;
 
-    const int m_hardResetDelay;
-    const int m_idleWaitInterval;
     MachineCommunication* const m_communicator;
+    CommandSender* const m_commandSender;
     WireController* const m_wireController;
     MachineStatusMonitor* const m_machineStatusMonitor;
     std::unique_ptr<QIODevice> m_device; // Non const to be reset when streaming ends
-    QQueue<int> m_sentBytes;
-    GCodeSender::StreamEndReason m_streamEndReason;
-    QString m_streamEndDescription;
+    bool m_running; // Machine switched to Run state
+    int m_expectedAcks;
+    bool m_startedSendingCommands; // We went Idle so we started streaming
 };
 
 Q_DECLARE_METATYPE(GCodeSender::StreamEndReason)

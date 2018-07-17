@@ -13,7 +13,7 @@ class MachineCommunication : public QObject
     Q_OBJECT
 
 public:
-    MachineCommunication(int hardResetDelay = 1000);
+    MachineCommunication(int hardResetDelay);
 
 public slots:
     void portFound(MachineInfo info, AbstractPortDiscovery* portDiscoverer);

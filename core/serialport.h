@@ -17,7 +17,6 @@ public:
 
     virtual bool open() = 0;
     virtual qint64 write(const QByteArray& data) = 0;
-    virtual QByteArray read(int msec, int maxBytes) = 0; // waits at most msec milliseconds
     virtual QByteArray readAll() = 0;
     virtual bool inError() const = 0;
     virtual QString errorString() const = 0;
@@ -36,7 +35,6 @@ public:
 
     bool open() override;
     qint64 write(const QByteArray& data) override;
-    QByteArray read(int msec, int maxBytes) override;
     QByteArray readAll() override;
     bool inError() const override;
     QString errorString() const override;

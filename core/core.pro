@@ -17,7 +17,8 @@ HEADERS += \
     gcodesender.h \
     wirecontroller.h \
     machinestate.h \
-    machinestatusmonitor.h
+    machinestatusmonitor.h \
+    commandsender.h
 SOURCES += \
     serialport.cpp \
     machineinfo.cpp \
@@ -25,4 +26,5 @@ SOURCES += \
     gcodesender.cpp \
     wirecontroller.cpp \
     machinestate.cpp \
-    machinestatusmonitor.cpp
+    machinestatusmonitor.cpp \
+    commandsender.cpp

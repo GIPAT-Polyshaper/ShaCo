@@ -11,12 +11,13 @@ namespace {
     const char fineIncrementCommand = 0x9C;
     const char fineDecrementCommand = 0x9D;
 
-    const QByteArray wireOnCommand("M3\n");
-    const QByteArray wireOffCommand("M5\n");
+    const QByteArray wireOnCommand("M3");
+    const QByteArray wireOffCommand("M5");
 }
 
-WireController::WireController(MachineCommunication *communicator)
+WireController::WireController(MachineCommunication *communicator, CommandSender *commandSender)
     : m_communicator(communicator)
+    , m_commandSender(commandSender)
     , m_wireOn(false)
     , m_baseTemperature(initialTemperature)
     , m_realTimePercent(100)
@@ -44,26 +45,17 @@ float WireController::maxRealTimeTemperature() const
     return static_cast<float>(maxPercentualRealTimeTemperature) * m_baseTemperature / 100.0f;
 }
 
-int WireController::switchWireOnCommandLength() const
-{
-    return wireOnCommand.size();
-}
-
-int WireController::switchWireOffCommandLength() const
-{
-    return wireOffCommand.size();
-}
-
 void WireController::setTemperature(float temperature)
 {
     m_baseTemperature = temperature;
 
-    int intTemp = static_cast<int>(std::round(m_baseTemperature));
-    QByteArray data = "XS" + QString::number(intTemp).toLatin1(); // X is replaced with reset command
     // Always reset realtime override: here we want to set exactly the requested temperature
-    data[0] = resetCommand;
-    m_communicator->writeLine(data);
+    m_communicator->writeData(QByteArray(1, resetCommand));
     m_realTimePercent = 100;
+
+    int intTemp = static_cast<int>(std::round(m_baseTemperature));
+    QByteArray data = "S" + QString::number(intTemp).toLatin1();
+    m_commandSender->sendCommand(data);
 
     emitTemperatureChanged();
 }
@@ -113,7 +105,7 @@ void WireController::switchWireOn()
         return;
     }
 
-    m_communicator->writeData(wireOnCommand);
+    m_commandSender->sendCommand(wireOnCommand);
     m_wireOn = true;
 
     emit wireOn();
@@ -141,7 +133,7 @@ void WireController::emitTemperatureChanged()
 
 void WireController::forceWireOff()
 {
-    m_communicator->writeData(wireOffCommand);
+    m_commandSender->sendCommand(wireOffCommand);
     m_wireOn = false;
 
     emit wireOff();

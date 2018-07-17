@@ -11,7 +11,9 @@ app.depends = core
 SOURCES += main.cpp \
     controller.cpp \
     worker.cpp
-LIBS += -L../core -lcore
+unix:LIBS += -L../core -lcore
+win32:debug:LIBS += -L../core/debug -lcore
+win32:release:LIBS += -L../core/release -lcore
 RESOURCES += ../qml.qrc
 
 HEADERS += \
