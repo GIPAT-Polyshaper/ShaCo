@@ -1,8 +1,20 @@
 - To create 7zip data files to put in data use the command: '/opt/Qt/Tools/QtInstallerFramework/3.0/bin/archivegen shaco.7z ShaCo'
+- Move the 7zip file in data (remove the directory with ShaCo.exe and libraries)
 - To create the installer use the command: '/opt/Qt/Tools/QtInstallerFramework/3.0/bin/binarycreator -c config/config.xml -p packages PolyShaper'
 
 - On windows, to collect all files necessary for installation
     - copy ShaCo.exe in an empty directory
     - run: export PATH=$PATH:/c/Qt/Tools/mingw530_32/bin/:/c/Qt/5.11.1/mingw53_32/bin/
-    - run: C:/Qt/5.11.1/mingw53_32/bin/windeployqt.exe ShaCo.exe
-    - do the steps above to create the 7zip file and the installer
+    - run: C:/Qt/5.11.1/mingw53_32/bin/windeployqt.exe --qmldir /c/Users/tomas/Desktop/ShaCo/ShaCo/qmlgit  ShaCo.exe
+    - do the steps above to create the 7zip file and the installer, BUT ALSO INCLUDE THE CONTENT OF QT qml DIRECTORY (All dirs in qml inside the same dir of ShaCo.exe,
+      only non-debug libraries). Some of the dirs are perhaps useless, try to reduce the set to the bare minimum
+
+- Possible command to install drivers:
+    rundll32 newdev DiInstallDriverA NULL <path-to-inf> 0 NULL
+- Useful links:
+    https://social.msdn.microsoft.com/Forums/windowsdesktop/en-US/60f4b917-93c9-400a-b91a-15375a8793bf/installing-driver-using-inf-file-from-command-line-on-windows-7-64-bit-failing
+    https://docs.microsoft.com/en-us/windows-hardware/drivers/install/setupapi-functions-that-simplify-driver-installation
+    https://docs.microsoft.com/it-it/windows/desktop/api/newdev/nf-newdev-diinstalldrivera
+    https://docs.microsoft.com/it-it/windows/desktop/api/newdev/nf-newdev-diinstalldrivera
+    https://www.walkernews.net/2007/06/06/quick-start-to-rundll32-syntax-and-example/
+
