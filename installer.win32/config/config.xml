@@ -2,13 +2,13 @@
 <Installer>
     <Name>PolyShaper Software</Name>
     <Version>0.1.0</Version>
-    <Title>PolyShaper Software Installer</Title>
+    <Title>PolyShaper Software</Title>
     <Publisher>GIPAT</Publisher>
     <ProductUrl>http://www.polyshaper.eu</ProductUrl>
     <InstallerWindowIcon>installerIcon.png</InstallerWindowIcon>
     <Logo>logo.png</Logo>
     <RunProgram>@TargetDir@/ShaCo</RunProgram>
-    <RunProgramDescription>ShaCo</RunProgramDescription>
+    <RunProgramDescription>Run ShaCo now</RunProgramDescription>
     <StartMenuDir>PolyShaper</StartMenuDir>
     <TargetDir>@ApplicationsDir@/PolyShaper</TargetDir>
 </Installer>

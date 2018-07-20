@@ -10,4 +10,5 @@
     </Licenses>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
+    <Script>installscript.qs</Script>
 </Package>
