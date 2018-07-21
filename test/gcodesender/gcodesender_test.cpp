@@ -117,7 +117,7 @@ GCodeSenderTest::Requirements GCodeSenderTest::createRequirements(bool setStateT
     r.serialPort = communicatorAndPort.second;
     r.commandSender = std::make_unique<CommandSender>(r.communicator.get());
     r.wireController = std::make_unique<WireController>(r.communicator.get(), r.commandSender.get());
-    r.statusMonitor = std::make_unique<MachineStatusMonitor>(100000, r.communicator.get());
+    r.statusMonitor = std::make_unique<MachineStatusMonitor>(10000, 10000, r.communicator.get());
 
     if (setStateToIdle) {
         r.serialPort->simulateReceivedData("<Idle|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");

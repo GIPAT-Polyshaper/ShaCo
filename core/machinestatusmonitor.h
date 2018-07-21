@@ -6,13 +6,13 @@
 #include "machinecommunication.h"
 #include "machinestate.h"
 
-// TODO-TOMMY As this continuously asks for machine state, we might use this class to signal when the machien stops responding (e.g. if we don't get any reply for more than X seconds). We should also check for eroors when sending (especially after we implement a class like CommandSender for immeidate commands
 class MachineStatusMonitor : public QObject
 {
     Q_OBJECT
 public:
-    // statusPollingInterval is in milliseconds
-    explicit MachineStatusMonitor(int statusPollingInterval, MachineCommunication* communicator);
+    // statusPollingInterval is in milliseconds, as well as watchdogDelay (if no answer is received
+    // within wathcdogDelay milliseconds, the port is closed)
+    explicit MachineStatusMonitor(int statusPollingInterval, int watchdogDelay, MachineCommunication* communicator);
 
     MachineState state() const;
 
@@ -24,12 +24,14 @@ private slots:
     void sendStatusReportQuery();
     void messageReceived(QByteArray message);
     void portClosed();
+    void watchdogTimerExpired();
 
 private:
     void setNewState(MachineState newState);
 
     MachineCommunication* const m_communicator;
     QTimer m_timer;
+    QTimer m_watchdog;
     MachineState m_state;
 };
 
