@@ -11,6 +11,7 @@
 #include <QtDebug>
 #include "machineinfo.h"
 #include "serialport.h"
+#include "immediatecommands.h"
 
 // A separate class because PortDiscovery is template
 class AbstractPortDiscovery : public QObject
@@ -99,6 +100,7 @@ private:
                 connect(m_serialPort.get(), &SerialPortInterface::dataAvailable,
                         this, &PortDiscovery<SerialPortInfo>::dataAvailable);
                 m_serialPort->open();
+                m_serialPort->write(QByteArray(1, ImmediateCommands::hardReset));
                 askFirmwareVersion();
 
                 candidateFound = true;

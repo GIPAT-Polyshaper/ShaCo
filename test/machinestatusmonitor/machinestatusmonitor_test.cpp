@@ -254,8 +254,6 @@ void MachineStatusMonitorTest::closePortIfNoMessageIsReceivedWithinWatchdogDelay
     QVERIFY(chrono.elapsed() > 950);
 }
 
-// POI TEST CHE WATCHDOG NON PARTE SE
-
 QTEST_GUILESS_MAIN(MachineStatusMonitorTest)
 
 #include "machinestatusmonitor_test.moc"

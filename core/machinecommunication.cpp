@@ -1,12 +1,6 @@
 #include "machinecommunication.h"
 #include <QThread>
-
-namespace {
-    const char feedHoldCommand = '!';
-    const char resumeFeedHoldCommand = '~';
-    const char softResetCommand = 0x18;
-    const char hardResetCommand = 0xC0;
-}
+#include "immediatecommands.h"
 
 MachineCommunication::MachineCommunication(int hardResetDelay)
     : QObject()
@@ -60,22 +54,22 @@ void MachineCommunication::closePort()
 
 void MachineCommunication::feedHold()
 {
-    writeData(QByteArray(1, feedHoldCommand));
+    writeData(QByteArray(1, ImmediateCommands::feedHold));
 }
 
 void MachineCommunication::resumeFeedHold()
 {
-    writeData(QByteArray(1, resumeFeedHoldCommand));
+    writeData(QByteArray(1, ImmediateCommands::resumeFeedHold));
 }
 
 void MachineCommunication::softReset()
 {
-    writeData(QByteArray(1, softResetCommand));
+    writeData(QByteArray(1, ImmediateCommands::softReset));
 }
 
 void MachineCommunication::hardReset()
 {
-    writeData(QByteArray(1, hardResetCommand));
+    writeData(QByteArray(1, ImmediateCommands::hardReset));
 
     // This is needed to give the machine time to start
     QThread::msleep(m_hardResetDelay);

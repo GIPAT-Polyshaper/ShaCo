@@ -1,15 +1,11 @@
 #include "wirecontroller.h"
 #include <cmath>
+#include "immediatecommands.h"
 
 namespace {
     const float initialTemperature = 30.0f;
     const int minPercentualRealTimeTemperature = 10;
     const int maxPercentualRealTimeTemperature = 200;
-    const char resetCommand = 0x99;
-    const char coarseIncrementCOmmand = 0x9A;
-    const char coarseDecrementCommand = 0x9B;
-    const char fineIncrementCommand = 0x9C;
-    const char fineDecrementCommand = 0x9D;
 
     const QByteArray wireOnCommand("M3");
     const QByteArray wireOffCommand("M5");
@@ -50,7 +46,7 @@ void WireController::setTemperature(float temperature)
     m_baseTemperature = temperature;
 
     // Always reset realtime override: here we want to set exactly the requested temperature
-    m_communicator->writeData(QByteArray(1, resetCommand));
+    m_communicator->writeData(QByteArray(1, ImmediateCommands::resetTemperature));
     m_realTimePercent = 100;
 
     int intTemp = static_cast<int>(std::round(m_baseTemperature));
@@ -76,8 +72,8 @@ void WireController::setRealTimeTemperature(float temperature)
     const int numCoarseVariations = percentualVariations / 10;
     const int numFineVariations = percentualVariations % 10;
 
-    const char coarseCommand = (temperature < m_baseTemperature) ? coarseDecrementCommand : coarseIncrementCOmmand;
-    const char fineCommand = (temperature < m_baseTemperature) ? fineDecrementCommand : fineIncrementCommand;
+    const char coarseCommand = (temperature < m_baseTemperature) ? ImmediateCommands::coarseTemperatureDecrement : ImmediateCommands::coarseTemperatureIncrement;
+    const char fineCommand = (temperature < m_baseTemperature) ? ImmediateCommands::fineTemperatureDecrement : ImmediateCommands::fineTemperatureIncrement;
     QByteArray message(numCoarseVariations + numFineVariations, coarseCommand);
     for (auto i = numCoarseVariations; i < message.size(); ++i) {
         message[i] = fineCommand;
@@ -93,7 +89,7 @@ void WireController::resetRealTimeTemperature()
         return;
     }
 
-    m_communicator->writeData(QByteArray(1, resetCommand));
+    m_communicator->writeData(QByteArray(1, ImmediateCommands::resetTemperature));
     m_realTimePercent = 100;
 
     emitTemperatureChanged();

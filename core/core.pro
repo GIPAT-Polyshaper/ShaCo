@@ -18,7 +18,8 @@ HEADERS += \
     wirecontroller.h \
     machinestate.h \
     machinestatusmonitor.h \
-    commandsender.h
+    commandsender.h \
+    immediatecommands.h
 SOURCES += \
     serialport.cpp \
     machineinfo.cpp \

@@ -1,9 +1,8 @@
 #include "machinestatusmonitor.h"
 #include <QRegularExpression>
+#include "immediatecommands.h"
 
 namespace {
-    const char statusReportQueryCommand = '?';
-
     const QRegularExpression statusRegExpr("^<(.*)>$", QRegularExpression::OptimizeOnFirstUsageOption);
 }
 
@@ -41,7 +40,7 @@ void MachineStatusMonitor::machineInitialized()
 
 void MachineStatusMonitor::sendStatusReportQuery()
 {
-    m_communicator->writeData(QByteArray(1, statusReportQueryCommand));
+    m_communicator->writeData(QByteArray(1, ImmediateCommands::statusReportQuery));
 }
 
 void MachineStatusMonitor::messageReceived(QByteArray message)
