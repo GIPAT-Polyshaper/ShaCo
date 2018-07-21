@@ -39,6 +39,7 @@ private Q_SLOTS:
     void sendCompletedCommandsIfEndlineInTheMiddleOfData();
     void keepDataAfterEndlineForNextMessage();
     void sendAllMessagesWhenMultipleAreReceivedWithTheSameCommand();
+    void doNotEmitSignalWhenClosingPortIfPortIsClosed();
 };
 
 MachineCommunicationTest::MachineCommunicationTest()
@@ -469,6 +470,20 @@ void MachineCommunicationTest::sendAllMessagesWhenMultipleAreReceivedWithTheSame
     QCOMPARE(spy.count(), 3);
     auto data3 = spy.at(2).at(0).toByteArray();
     QCOMPARE(data3, "Another");
+}
+
+void MachineCommunicationTest::doNotEmitSignalWhenClosingPortIfPortIsClosed()
+{
+    MachineCommunication communicator(100);
+
+    QSignalSpy closedSpy(&communicator, &MachineCommunication::portClosed);
+    QSignalSpy errorSpy(&communicator, &MachineCommunication::portClosedWithError);
+
+    communicator.closePort();
+    QCOMPARE(closedSpy.count(), 0);
+
+    communicator.closePortWithError("bla bla bla");
+    QCOMPARE(errorSpy.count(), 0);
 }
 
 QTEST_GUILESS_MAIN(MachineCommunicationTest)

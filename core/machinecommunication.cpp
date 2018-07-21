@@ -44,14 +44,18 @@ void MachineCommunication::writeLine(QByteArray data)
 
 void MachineCommunication::closePortWithError(QString reason)
 {
-    emit portClosedWithError(reason);
-    m_serialPort.reset();
+    if (m_serialPort) {
+        emit portClosedWithError(reason);
+        m_serialPort.reset();
+    }
 }
 
 void MachineCommunication::closePort()
 {
-    emit portClosed();
-    m_serialPort.reset();
+    if (m_serialPort) {
+        emit portClosed();
+        m_serialPort.reset();
+    }
 }
 
 void MachineCommunication::feedHold()
