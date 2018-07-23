@@ -98,6 +98,10 @@ private Q_SLOTS:
     void emitStreamingEndedSignalWithErrorAndResetIfMachineGoesInUnexpectedState();
     void emitStreamingEndedSignalWithErrorAndResetIfMessageRepliesAreLost();
     void emitStreamingEndedSignalWithErrorAndResetIfUserInterruptStreaming();
+    void doNothingIfStreamingHasAlreadyStarted();
+    void doNotAllowRestartingStreamingAfterError();
+    void doNothingIfStateChangeIsReceivedAfterStreamingInterrupted();
+    void doNothingIfStreamInterruptedAfterEndStreaming();
 };
 
 GCodeSenderTest::GCodeSenderTest()
@@ -113,7 +117,7 @@ GCodeSenderTest::Requirements GCodeSenderTest::createRequirements(bool setStateT
     r.serialPort = communicatorAndPort.second;
     r.commandSender = std::make_unique<CommandSender>(r.communicator.get());
     r.wireController = std::make_unique<WireController>(r.communicator.get(), r.commandSender.get());
-    r.statusMonitor = std::make_unique<MachineStatusMonitor>(100000, r.communicator.get());
+    r.statusMonitor = std::make_unique<MachineStatusMonitor>(10000, 10000, r.communicator.get());
 
     if (setStateToIdle) {
         r.serialPort->simulateReceivedData("<Idle|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.000,0.000,0.000>\r\n");
@@ -582,6 +586,86 @@ void GCodeSenderTest::emitStreamingEndedSignalWithErrorAndResetIfUserInterruptSt
     QCOMPARE(endSpy.at(0).at(1).toString(), tr("User interrupted streaming"));
 
     QCOMPARE(initializationSpy.count(), 1);
+}
+
+void GCodeSenderTest::doNothingIfStreamingHasAlreadyStarted()
+{
+    auto r = createRequirements();
+
+    auto buffer = new TestBuffer();
+    GCodeSender fileSender(r.communicator.get(), r.commandSender.get(), r.wireController.get(), r.statusMonitor.get(), std::unique_ptr<QIODevice>(buffer));
+
+    QSignalSpy spy(&fileSender, &GCodeSender::streamingStarted);
+
+    fileSender.streamData();
+    fileSender.streamData();
+
+    // Signal emitted only once
+    QCOMPARE(spy.count(), 1);
+}
+
+void GCodeSenderTest::doNotAllowRestartingStreamingAfterError()
+{
+    auto r = createRequirements();
+
+    auto buffer = new TestBuffer();
+    buffer->buffer() = "XXXXX";
+    GCodeSender fileSender(r.communicator.get(), r.commandSender.get(), r.wireController.get(), r.statusMonitor.get(), std::unique_ptr<QIODevice>(buffer));
+
+    QSignalSpy startSpy(&fileSender, &GCodeSender::streamingStarted);
+    QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
+
+    fileSender.streamData();
+
+    // ack for initial wire on commands, then error for our command
+    sendAcks(r.serialPort, 1);
+    r.serialPort->simulateReceivedData("error:17\r\n");
+
+    QCOMPARE(startSpy.count(), 1);
+    QCOMPARE(endSpy.count(), 1);
+
+    fileSender.streamData();
+    // Nothing new happends
+    QCOMPARE(startSpy.count(), 1);
+    QCOMPARE(endSpy.count(), 1);
+}
+
+void GCodeSenderTest::doNothingIfStateChangeIsReceivedAfterStreamingInterrupted()
+{
+    auto r = createRequirements(false);
+
+    auto buffer = new TestBuffer();
+    buffer->buffer() = "XXXXX";
+    GCodeSender fileSender(r.communicator.get(), r.commandSender.get(), r.wireController.get(), r.statusMonitor.get(), std::unique_ptr<QIODevice>(buffer));
+
+    QSignalSpy spy(&fileSender, &GCodeSender::streamingEnded);
+
+    fileSender.streamData();
+    fileSender.interruptStreaming();
+
+    QCOMPARE(spy.count(), 1);
+
+    sendState(r.serialPort, "Idle");
+
+    QCOMPARE(spy.count(), 1);
+}
+
+void GCodeSenderTest::doNothingIfStreamInterruptedAfterEndStreaming()
+{
+    auto r = createRequirements();
+
+    auto buffer = new TestBuffer();
+    GCodeSender fileSender(r.communicator.get(), r.commandSender.get(), r.wireController.get(), r.statusMonitor.get(), std::unique_ptr<QIODevice>(buffer));
+
+    QSignalSpy spy(&fileSender, &GCodeSender::streamingEnded);
+
+    fileSender.streamData();
+    QCOMPARE(spy.count(), 1);
+
+    fileSender.interruptStreaming();
+
+    // Signal emitted only once
+    QCOMPARE(spy.count(), 1);
 }
 
 QTEST_GUILESS_MAIN(GCodeSenderTest)

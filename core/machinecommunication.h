@@ -13,7 +13,7 @@ class MachineCommunication : public QObject
     Q_OBJECT
 
 public:
-    MachineCommunication(int hardResetDelay);
+    MachineCommunication(unsigned int hardResetDelay);
 
 public slots:
     void portFound(MachineInfo info, AbstractPortDiscovery* portDiscoverer);
@@ -38,12 +38,12 @@ signals:
 
 private slots:
     void readData();
+    void errorOccurred();
 
 private:
-    bool checkPortInErrorAndCloseIfTrue();
     QList<QByteArray> extractMessages();
 
-    const int m_hardResetDelay;
+    const unsigned int m_hardResetDelay;
     std::unique_ptr<SerialPortInterface> m_serialPort;
     QByteArray m_messageBuffer;
 };

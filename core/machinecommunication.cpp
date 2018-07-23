@@ -1,14 +1,8 @@
 #include "machinecommunication.h"
 #include <QThread>
+#include "immediatecommands.h"
 
-namespace {
-    const char feedHoldCommand = '!';
-    const char resumeFeedHoldCommand = '~';
-    const char softResetCommand = 0x18;
-    const char hardResetCommand = 0xC0;
-}
-
-MachineCommunication::MachineCommunication(int hardResetDelay)
+MachineCommunication::MachineCommunication(unsigned int hardResetDelay)
     : QObject()
     , m_hardResetDelay(hardResetDelay)
     , m_serialPort()
@@ -20,6 +14,7 @@ void MachineCommunication::portFound(MachineInfo, AbstractPortDiscovery* portDis
     m_serialPort = portDiscoverer->obtainPort();
 
     connect(m_serialPort.get(), &SerialPortInterface::dataAvailable, this, &MachineCommunication::readData);
+    connect(m_serialPort.get(), &SerialPortInterface::errorOccurred, this, &MachineCommunication::errorOccurred);
 
     emit machineInitialized();
 }
@@ -30,9 +25,9 @@ void MachineCommunication::writeData(QByteArray data)
         return;
     }
 
-    m_serialPort->write(data);
+    auto res = m_serialPort->write(data);
 
-    if (!checkPortInErrorAndCloseIfTrue()) {
+    if (res != -1) {
         emit dataSent(data);
     }
 }
@@ -44,34 +39,38 @@ void MachineCommunication::writeLine(QByteArray data)
 
 void MachineCommunication::closePortWithError(QString reason)
 {
-    emit portClosedWithError(reason);
-    m_serialPort.reset();
+    if (m_serialPort) {
+        emit portClosedWithError(reason);
+        m_serialPort.reset();
+    }
 }
 
 void MachineCommunication::closePort()
 {
-    emit portClosed();
-    m_serialPort.reset();
+    if (m_serialPort) {
+        emit portClosed();
+        m_serialPort.reset();
+    }
 }
 
 void MachineCommunication::feedHold()
 {
-    writeData(QByteArray(1, feedHoldCommand));
+    writeData(QByteArray(1, ImmediateCommands::feedHold));
 }
 
 void MachineCommunication::resumeFeedHold()
 {
-    writeData(QByteArray(1, resumeFeedHoldCommand));
+    writeData(QByteArray(1, ImmediateCommands::resumeFeedHold));
 }
 
 void MachineCommunication::softReset()
 {
-    writeData(QByteArray(1, softResetCommand));
+    writeData(QByteArray(1, ImmediateCommands::softReset));
 }
 
 void MachineCommunication::hardReset()
 {
-    writeData(QByteArray(1, hardResetCommand));
+    writeData(QByteArray(1, ImmediateCommands::hardReset));
 
     // This is needed to give the machine time to start
     QThread::msleep(m_hardResetDelay);
@@ -84,7 +83,7 @@ void MachineCommunication::readData()
     auto data = m_serialPort->readAll();
     m_messageBuffer += data;
 
-    if (!checkPortInErrorAndCloseIfTrue()) {
+    if (!data.isEmpty()) {
         emit dataReceived(data);
 
         for (auto message: extractMessages()) {
@@ -93,15 +92,9 @@ void MachineCommunication::readData()
     }
 }
 
-bool MachineCommunication::checkPortInErrorAndCloseIfTrue()
+void MachineCommunication::errorOccurred()
 {
-    if (m_serialPort->inError()) {
-        closePortWithError(m_serialPort->errorString());
-
-        return true;
-    } else {
-        return false;
-    }
+    closePortWithError(m_serialPort->errorString());
 }
 
 QList<QByteArray> MachineCommunication::extractMessages()

@@ -6,6 +6,7 @@
 #include <QSignalSpy>
 #include <QtTest>
 #include "core/commandsender.h"
+#include "core/machinecommunication.h"
 #include "testcommon/testportdiscovery.h"
 #include "testcommon/testserialport.h"
 #include "testcommon/utils.h"
@@ -103,6 +104,7 @@ private Q_SLOTS:
     void neverSendNewCommandsIfTheareAreEnqueuedOnes();
     void callCommandSentWhenACommandIsSent();
     void doNotCallCommandSentOfListenerIfListerWasDeleted();
+    void discardNestedCallsToResetState();
 };
 
 CommandSenderTest::CommandSenderTest()
@@ -199,7 +201,7 @@ void CommandSenderTest::callOkReplyOfListenerWhenOkIsReceived()
     serialPort->simulateReceivedData("ok\r\n");
 
     QCOMPARE(listener.okCalls().size(), 1);
-    QCOMPARE(listener.okCalls()[0], 17);
+    QCOMPARE(listener.okCalls()[0], 17u);
 }
 
 void CommandSenderTest::callErroReplyOfListenerWhenErrorIsReceived()
@@ -217,7 +219,7 @@ void CommandSenderTest::callErroReplyOfListenerWhenErrorIsReceived()
 
     QCOMPARE(listener.okCalls().size(), 0);
     QCOMPARE(listener.errorCalls().size(), 1);
-    QCOMPARE(listener.errorCalls()[0].first, 13);
+    QCOMPARE(listener.errorCalls()[0].first, 13u);
     QCOMPARE(listener.errorCalls()[0].second, 78);
 }
 
@@ -255,13 +257,13 @@ void CommandSenderTest::callTheRightListenerWhenMessageIsReceived()
 
     QCOMPARE(listener1.errorCalls().size(), 0);
     QCOMPARE(listener1.okCalls().size(), 1);
-    QCOMPARE(listener1.okCalls()[0], 17);
+    QCOMPARE(listener1.okCalls()[0], 17u);
 
     serialPort->simulateReceivedData("error:54\r\n");
 
     QCOMPARE(listener2.okCalls().size(), 0);
     QCOMPARE(listener2.errorCalls().size(), 1);
-    QCOMPARE(listener2.errorCalls()[0].first, 13);
+    QCOMPARE(listener2.errorCalls()[0].first, 13u);
     QCOMPARE(listener2.errorCalls()[0].second, 54);
 }
 
@@ -568,13 +570,13 @@ void CommandSenderTest::callReplyLostOfListenersWhenPortClosed()
 
     // Closing port, all listeners should be called
     communicator->closePort();
-    for (auto i = 0; i < 16; ++i) {
+    for (auto i = 0u; i < 16u; ++i) {
         QCOMPARE(listeners[i]->lostCalls().count(), 1);
         QCOMPARE(listeners[i]->lostCalls()[0].first, i);
         QCOMPARE(listeners[i]->lostCalls()[0].second, true);
     }
     QCOMPARE(listeners[16]->lostCalls().count(), 1);
-    QCOMPARE(listeners[16]->lostCalls()[0].first, 16);
+    QCOMPARE(listeners[16]->lostCalls()[0].first, 16u);
     QCOMPARE(listeners[16]->lostCalls()[0].second, false);
 }
 
@@ -663,11 +665,11 @@ void CommandSenderTest::resetStateWhenPortClosedWithError()
     QCOMPARE(spy.at(32).at(0).toByteArray(), "new one\n");
 
     // Non-null listeners are called
-    for (auto i = 0; i < 19; ++i) {
+    for (auto i = 0u; i < 19u; ++i) {
         if (listeners[i]){
             QCOMPARE(listeners[i]->lostCalls().count(), 1);
             QCOMPARE(listeners[i]->lostCalls()[0].first, i);
-            if (i < 16) {
+            if (i < 16u) {
                 QCOMPARE(listeners[i]->lostCalls()[0].second, true);
             } else {
                 QCOMPARE(listeners[i]->lostCalls()[0].second, false);
@@ -732,11 +734,11 @@ void CommandSenderTest::resetStateWhenMachineInitialized()
     QCOMPARE(spy.at(33).at(0).toByteArray(), "new one\n");
 
     // Non-null listeners are called
-    for (auto i = 0; i < 19; ++i) {
+    for (auto i = 0u; i < 19u; ++i) {
         if (listeners[i]){
             QCOMPARE(listeners[i]->lostCalls().count(), 1);
             QCOMPARE(listeners[i]->lostCalls()[0].first, i);
-            if (i < 16) {
+            if (i < 16u) {
                 QCOMPARE(listeners[i]->lostCalls()[0].second, true);
             } else {
                 QCOMPARE(listeners[i]->lostCalls()[0].second, false);
@@ -774,7 +776,7 @@ void CommandSenderTest::callCommandSentWhenACommandIsSent()
     QVERIFY(sender.sendCommand("Pippo", 17, &listener));
 
     QCOMPARE(listener.sentCalls().size(), 1);
-    QCOMPARE(listener.sentCalls()[0], 17);
+    QCOMPARE(listener.sentCalls()[0], 17u);
 }
 
 void CommandSenderTest::doNotCallCommandSentOfListenerIfListerWasDeleted()
@@ -798,6 +800,41 @@ void CommandSenderTest::doNotCallCommandSentOfListenerIfListerWasDeleted()
 
     // Now replying to one line. This should simply not crash
     serialPort->simulateReceivedData("ok\r\n");
+}
+
+void CommandSenderTest::discardNestedCallsToResetState()
+{
+    // This was a bug: calling hardReset from replyLost() callback caused
+    // nested execution of resetState(), with container being modified while
+    // iterators were active (in the outer call)
+    class ListenerWithReset : public CommandSenderListener
+    {
+    public:
+        ListenerWithReset(MachineCommunication* c) : m_communicator(c) {}
+
+        void commandSent(CommandCorrelationId) override {}
+        void okReply(CommandCorrelationId) override {}
+        void errorReply(CommandCorrelationId, int) override {}
+        void replyLost(CommandCorrelationId, bool) override
+        {
+            m_communicator->hardReset();
+        }
+
+    private:
+        MachineCommunication* m_communicator;
+    };
+
+    auto communicator = std::move(createCommunicator().first);
+    CommandSender sender(communicator.get());
+
+    auto listener1 = std::make_unique<ListenerWithReset>(communicator.get());
+    auto listener2 = std::make_unique<ListenerWithReset>(communicator.get());
+
+    sender.sendCommand("0123456\n", 0, listener1.get());
+    sender.sendCommand("0123456\n", 0, listener2.get());
+
+    // This should simply not crash
+    communicator->closePortWithError("bla bla bla");
 }
 
 QTEST_GUILESS_MAIN(CommandSenderTest)

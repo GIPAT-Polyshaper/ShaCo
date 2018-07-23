@@ -11,6 +11,7 @@
 #include <QtDebug>
 #include "machineinfo.h"
 #include "serialport.h"
+#include "immediatecommands.h"
 
 // A separate class because PortDiscovery is template
 class AbstractPortDiscovery : public QObject
@@ -85,6 +86,11 @@ private:
         }
     }
 
+    void serialPortError()
+    {
+        moveToNextPortOrScheduleRescan();
+    }
+
     void searchPort()
     {
         rescanIfNeeded();
@@ -95,10 +101,7 @@ private:
 
             if (vendorAndProductMatch(p)) {
                 qDebug() << "Found a port with matching vendor and product identifier";
-                m_serialPort = m_serialPortFactory(p);
-                connect(m_serialPort.get(), &SerialPortInterface::dataAvailable,
-                        this, &PortDiscovery<SerialPortInfo>::dataAvailable);
-                m_serialPort->open();
+                initializePort(p);
                 askFirmwareVersion();
 
                 candidateFound = true;
@@ -109,6 +112,18 @@ private:
         if (!candidateFound) {
             m_timer.start(m_scanDelayMillis);
         }
+    }
+
+    void initializePort(const SerialPortInfo& info)
+    {
+        m_serialPort = m_serialPortFactory(info);
+        connect(m_serialPort.get(), &SerialPortInterface::dataAvailable,
+                this, &PortDiscovery<SerialPortInfo>::dataAvailable);
+        connect(m_serialPort.get(), &SerialPortInterface::errorOccurred,
+                this, &PortDiscovery<SerialPortInfo>::serialPortError);
+        m_serialPort->open();
+        // This is necessary in case the machine is in error
+        m_serialPort->write(QByteArray(1, ImmediateCommands::hardReset));
     }
 
     void rescanIfNeeded()

@@ -14,6 +14,7 @@ CommandSenderListener::CommandSenderListener()
 CommandSender::CommandSender(MachineCommunication* communicator)
     : m_communicator(communicator)
     , m_sentBytes()
+    , m_resettingState(false)
 {
     connect(m_communicator, &MachineCommunication::messageReceived, this, &CommandSender::messageReceived);
     connect(m_communicator, &MachineCommunication::portClosed, this, &CommandSender::resetState);
@@ -68,10 +69,17 @@ void CommandSender::listenerDestroyed(QObject* obj)
 
 void CommandSender::resetState()
 {
+    // This is to avoid nested calls to this function
+    if (m_resettingState) {
+        return;
+    }
+
+    m_resettingState = true;
     callReplyLostAndResetQueue(m_sentCommands, true);
     callReplyLostAndResetQueue(m_commandsToSend, false);
 
     m_sentBytes = 0;
+    m_resettingState = false;
 }
 
 bool CommandSender::validateAndFixCommand(QByteArray& command)

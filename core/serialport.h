@@ -18,12 +18,12 @@ public:
     virtual bool open() = 0;
     virtual qint64 write(const QByteArray& data) = 0;
     virtual QByteArray readAll() = 0;
-    virtual bool inError() const = 0;
     virtual QString errorString() const = 0;
     virtual void close() = 0;
 
 signals:
     void dataAvailable();
+    void errorOccurred();
 };
 
 class SerialPort : public SerialPortInterface
@@ -36,9 +36,11 @@ public:
     bool open() override;
     qint64 write(const QByteArray& data) override;
     QByteArray readAll() override;
-    bool inError() const override;
     QString errorString() const override;
     void close() override;
+
+private:
+    void signalErrorOccurred(QSerialPort::SerialPortError error);
 
 private:
     QSerialPort m_serialPort;

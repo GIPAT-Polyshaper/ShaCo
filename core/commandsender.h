@@ -70,6 +70,7 @@ private:
     QSet<QObject*> m_listeners;
     QQueue<CommandToSend> m_commandsToSend;
     int m_sentBytes;
+    bool m_resettingState;
 };
 
 #endif // COMMANDSENDER_H

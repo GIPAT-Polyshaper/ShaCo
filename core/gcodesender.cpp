@@ -45,6 +45,10 @@ GCodeSender::GCodeSender(MachineCommunication* communicator, CommandSender* comm
 
 void GCodeSender::streamData()
 {
+    if (!m_device || m_device->isOpen()) {
+        return;
+    }
+
     emit streamingStarted();
 
     if (!m_device->open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -59,7 +63,9 @@ void GCodeSender::streamData()
 
 void GCodeSender::interruptStreaming()
 {
-    emitStreamingEndedAndReset(StreamEndReason::UserInterrupted, tr("User interrupted streaming"));
+    if (m_device) {
+        emitStreamingEndedAndReset(StreamEndReason::UserInterrupted, tr("User interrupted streaming"));
+    }
 }
 
 void GCodeSender::stateChanged(MachineState newState)
@@ -133,11 +139,15 @@ void GCodeSender::emitStreamingEndedAndReset(StreamEndReason reason, QString des
 
 void GCodeSender::startSendingCommands()
 {
+    if (!m_device) {
+        return;
+    }
+
     m_startedSendingCommands = true;
 
     if (m_device->atEnd()) {
         // Empty stream, closing here
-        emit streamingEnded(StreamEndReason::Completed, tr("Success"));
+        finishStreaming();
         return;
     }
 

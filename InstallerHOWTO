@@ -5,7 +5,7 @@
 - On windows, to collect all files necessary for installation
     - copy ShaCo.exe in an empty directory
     - run: export PATH=$PATH:/c/Qt/Tools/mingw530_32/bin/:/c/Qt/5.11.1/mingw53_32/bin/
-    - run: C:/Qt/5.11.1/mingw53_32/bin/windeployqt.exe --qmldir /c/Users/tomas/Desktop/ShaCo/ShaCo/qmlgit  ShaCo.exe
+    - run: C:/Qt/5.11.1/mingw53_32/bin/windeployqt.exe --qmldir /c/Users/tomas/Desktop/ShaCo/ShaCo/qml ShaCo.exe
     - do the steps above to create the 7zip file and the installer, BUT ALSO INCLUDE THE CONTENT OF QT qml DIRECTORY (All dirs in qml inside the same dir of ShaCo.exe,
       only non-debug libraries). Some of the dirs are perhaps useless, try to reduce the set to the bare minimum
 

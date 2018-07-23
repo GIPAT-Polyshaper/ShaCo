@@ -30,7 +30,7 @@ Worker::Worker()
     , m_machineCommunicator(new MachineCommunication(1000))
     , m_commandSender(new CommandSender(m_machineCommunicator.get()))
     , m_wireController(new WireController(m_machineCommunicator.get(), m_commandSender.get()))
-    , m_statusMonitor(new MachineStatusMonitor(1000, m_machineCommunicator.get())) // polling every second
+    , m_statusMonitor(new MachineStatusMonitor(1000, 3000, m_machineCommunicator.get())) // polling every second
 {
 }
 

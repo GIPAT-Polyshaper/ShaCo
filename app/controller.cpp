@@ -215,6 +215,7 @@ void Controller::gcodeSenderCreated(GCodeSender* sender)
 void Controller::signalPortFound(MachineInfo info)
 {
     m_connected = true;
+    m_senderCreated = false;
 
     emit portFound(info.machineName(), info.firmwareVersion());
     emit connectedChanged();
@@ -223,6 +224,7 @@ void Controller::signalPortFound(MachineInfo info)
 void Controller::signalPortClosedWithError(QString reason)
 {
     m_connected = false;
+    m_senderCreated = false;
 
     emit portClosedWithError(reason);
     emit connectedChanged();

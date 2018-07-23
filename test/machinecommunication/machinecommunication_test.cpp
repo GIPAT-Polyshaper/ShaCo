@@ -39,6 +39,7 @@ private Q_SLOTS:
     void sendCompletedCommandsIfEndlineInTheMiddleOfData();
     void keepDataAfterEndlineForNextMessage();
     void sendAllMessagesWhenMultipleAreReceivedWithTheSameCommand();
+    void doNotEmitSignalWhenClosingPortIfPortIsClosed();
 };
 
 MachineCommunicationTest::MachineCommunicationTest()
@@ -142,6 +143,8 @@ void MachineCommunicationTest::ifPortIsInErrorAfterWriteClosePortAndEmitSignal()
     communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
     communicator.writeLine("some data to write");
 
+    serialPort->emitErrorSignal();
+
     QCOMPARE(spyPortDeleted.count(), 1);
     QCOMPARE(spyPortClosed.count(), 1);
     auto errorString = spyPortClosed.at(0).at(0).toString();
@@ -163,6 +166,8 @@ void MachineCommunicationTest::ifPortIsInErrorAfterReadClosePortAndEmitSignal()
 
     communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
     serialPort->simulateReceivedData("Toc toc...");
+
+    serialPort->emitErrorSignal();
 
     QCOMPARE(spyPortDeleted.count(), 1);
     QCOMPARE(spyPortClosed.count(), 1);
@@ -469,6 +474,20 @@ void MachineCommunicationTest::sendAllMessagesWhenMultipleAreReceivedWithTheSame
     QCOMPARE(spy.count(), 3);
     auto data3 = spy.at(2).at(0).toByteArray();
     QCOMPARE(data3, "Another");
+}
+
+void MachineCommunicationTest::doNotEmitSignalWhenClosingPortIfPortIsClosed()
+{
+    MachineCommunication communicator(100);
+
+    QSignalSpy closedSpy(&communicator, &MachineCommunication::portClosed);
+    QSignalSpy errorSpy(&communicator, &MachineCommunication::portClosedWithError);
+
+    communicator.closePort();
+    QCOMPARE(closedSpy.count(), 0);
+
+    communicator.closePortWithError("bla bla bla");
+    QCOMPARE(errorSpy.count(), 0);
 }
 
 QTEST_GUILESS_MAIN(MachineCommunicationTest)

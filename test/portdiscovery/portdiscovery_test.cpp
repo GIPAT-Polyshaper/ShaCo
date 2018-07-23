@@ -60,16 +60,9 @@ public:
         return m_readData;
     }
 
-    bool inError() const override // Not used in this test
-    {
-        throw QString("inError should not be used in this test!!!");
-        return true;
-    }
-
     QString errorString() const override // Not used in this test
     {
         throw QString("errorString should not be used in this test!!!");
-        return QString();
     }
 
     void close() override // Not used in this test
@@ -82,6 +75,11 @@ public:
         m_readData = data;
 
         emit dataAvailable();
+    }
+
+    void emitErrorSignal()
+    {
+        emit errorOccurred();
     }
 
 signals:
@@ -107,7 +105,7 @@ private Q_SLOTS:
     void emitAMessageWhenStartProbing();
     void continuouslyProbeForPortsAtRegularIntervals();
     void openPortWhenTheExpectedVendorAndProductIdAreFound();
-    void askFirmwareVersionAfterOpeningPort();
+    void resetAndAskFirmwareVersionAfterOpeningPort();
     void askFirmwareVersionAgainIfNoAswerIsReceived();
     void ifTheExpectedReplyIsReceivedEmitSignal();
     void stopPollingWhenAValidPortIsFound();
@@ -117,6 +115,7 @@ private Q_SLOTS:
     void continueWithNextPortAfterFailingTheMaximumNumberOfAttemptsOnAPort();
     void discardAccumulatedDataWhenOpeningANewPort();
     void whenObtainPortIsCalledReturnPortAndDisconnectFromSignals();
+    void deletePortAndContinueIfErrorSignalIsReceived();
 };
 
 PortDiscoveryTest::PortDiscoveryTest()
@@ -194,7 +193,7 @@ void PortDiscoveryTest::openPortWhenTheExpectedVendorAndProductIdAreFound()
     QCOMPARE(openSpy.count(), 1);
 }
 
-void PortDiscoveryTest::askFirmwareVersionAfterOpeningPort()
+void PortDiscoveryTest::resetAndAskFirmwareVersionAfterOpeningPort()
 {
     TestPortInfo portInfo(0x2341, 0x0043);
     auto serialPort = new TestSerialPort();
@@ -207,9 +206,9 @@ void PortDiscoveryTest::askFirmwareVersionAfterOpeningPort()
 
     portDiscoverer.start();
 
-    QCOMPARE(spy.count(), 1);
-    auto writtenData = spy.at(0).at(0).toByteArray();
-    QCOMPARE(writtenData, "$I\n");
+    QCOMPARE(spy.count(), 2);
+    QCOMPARE(spy.at(0).at(0).toByteArray(), "\xC0");
+    QCOMPARE(spy.at(1).at(0).toByteArray(), "$I\n");
 }
 
 void PortDiscoveryTest::askFirmwareVersionAgainIfNoAswerIsReceived()
@@ -228,16 +227,17 @@ void PortDiscoveryTest::askFirmwareVersionAgainIfNoAswerIsReceived()
     portDiscoverer.start();
 
     // First is immediate
-    QCOMPARE(spy.count(), 1);
-    QCOMPARE(spy.at(0).at(0).toByteArray(), "$I\n");
-
-    QVERIFY(spy.wait(450));
-    QVERIFY(chrono.restart() > 250);
+    QCOMPARE(spy.count(), 2);
+    QCOMPARE(spy.at(0).at(0).toByteArray(), "\xC0");
     QCOMPARE(spy.at(1).at(0).toByteArray(), "$I\n");
 
     QVERIFY(spy.wait(450));
-    QVERIFY(chrono.elapsed() > 250);
+    QVERIFY(chrono.restart() > 250);
     QCOMPARE(spy.at(2).at(0).toByteArray(), "$I\n");
+
+    QVERIFY(spy.wait(450));
+    QVERIFY(chrono.elapsed() > 250);
+    QCOMPARE(spy.at(3).at(0).toByteArray(), "$I\n");
 }
 
 void PortDiscoveryTest::ifTheExpectedReplyIsReceivedEmitSignal()
@@ -277,7 +277,7 @@ void PortDiscoveryTest::stopPollingWhenAValidPortIsFound()
 
     serialPort->simulateReceivedData("[PolyShaper Oranje][1.2]ok\r\n");
 
-    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.count(), 2); // hard reset + request of information
 
     // There should be no more requests
     QVERIFY(!spy.wait(600));
@@ -298,7 +298,7 @@ void PortDiscoveryTest::continuePollingIfWrongAnswerIsReceived()
 
     serialPort->simulateReceivedData("invalid something\r\n");
 
-    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.count(), 2); // hard reset + request for information
 
     // There should be more requests
     QVERIFY(spy.wait(450));
@@ -358,22 +358,24 @@ void PortDiscoveryTest::askAgainForPortListAfterFailingTheMaximumNumberOfAttempt
     QCOMPARE(portListingSpy.count(), 1);
 
     // First is immediate
-    QCOMPARE(dataWrittenSpy1.count(), 1);
-    QCOMPARE(dataWrittenSpy1.at(0).at(0).toByteArray(), "$I\n");
-
-    QVERIFY(dataWrittenSpy1.wait(250));
+    QCOMPARE(dataWrittenSpy1.count(), 2);
+    QCOMPARE(dataWrittenSpy1.at(0).at(0).toByteArray(), "\xC0");
     QCOMPARE(dataWrittenSpy1.at(1).at(0).toByteArray(), "$I\n");
 
     QVERIFY(dataWrittenSpy1.wait(250));
     QCOMPARE(dataWrittenSpy1.at(2).at(0).toByteArray(), "$I\n");
 
+    QVERIFY(dataWrittenSpy1.wait(250));
+    QCOMPARE(dataWrittenSpy1.at(3).at(0).toByteArray(), "$I\n");
+
     // Now it should call listing again after the delay and restart polling port
     QVERIFY(portListingSpy.wait(650));
-    QCOMPARE(dataWrittenSpy2.count(), 1);
-    QCOMPARE(dataWrittenSpy2.at(0).at(0).toByteArray(), "$I\n");
+    QCOMPARE(dataWrittenSpy2.count(), 2);
+    QCOMPARE(dataWrittenSpy2.at(0).at(0).toByteArray(), "\xC0");
+    QCOMPARE(dataWrittenSpy2.at(1).at(0).toByteArray(), "$I\n");
 
     QVERIFY(dataWrittenSpy2.wait(250));
-    QCOMPARE(dataWrittenSpy2.at(1).at(0).toByteArray(), "$I\n");
+    QCOMPARE(dataWrittenSpy2.at(2).at(0).toByteArray(), "$I\n");
 }
 
 void PortDiscoveryTest::continueWithNextPortAfterFailingTheMaximumNumberOfAttemptsOnAPort()
@@ -406,22 +408,25 @@ void PortDiscoveryTest::continueWithNextPortAfterFailingTheMaximumNumberOfAttemp
     QCOMPARE(portListingSpy.count(), 1);
 
     // First is immediate
-    QCOMPARE(dataWrittenSpy1.count(), 1);
-    QCOMPARE(dataWrittenSpy1.at(0).at(0).toByteArray(), "$I\n");
-
-    QVERIFY(dataWrittenSpy1.wait(250));
+    QCOMPARE(dataWrittenSpy1.count(), 2);
+    QCOMPARE(dataWrittenSpy1.at(0).at(0).toByteArray(), "\xC0");
     QCOMPARE(dataWrittenSpy1.at(1).at(0).toByteArray(), "$I\n");
 
     QVERIFY(dataWrittenSpy1.wait(250));
     QCOMPARE(dataWrittenSpy1.at(2).at(0).toByteArray(), "$I\n");
 
+    QVERIFY(dataWrittenSpy1.wait(250));
+    QCOMPARE(dataWrittenSpy1.at(3).at(0).toByteArray(), "$I\n");
+
     // Now it should move to the following port immediately, then continue via polling
     QVERIFY(dataWrittenSpy2.wait(250));
-    QCOMPARE(dataWrittenSpy2.at(0).at(0).toByteArray(), "$I\n");
+    QCOMPARE(dataWrittenSpy2.count(), 2);
+    QCOMPARE(dataWrittenSpy2.at(0).at(0).toByteArray(), "\xC0");
+    QCOMPARE(dataWrittenSpy2.at(1).at(0).toByteArray(), "$I\n");
     QCOMPARE(portListingSpy.count(), 1);
 
     QVERIFY(dataWrittenSpy2.wait(250));
-    QCOMPARE(dataWrittenSpy2.at(1).at(0).toByteArray(), "$I\n");
+    QCOMPARE(dataWrittenSpy2.at(2).at(0).toByteArray(), "$I\n");
 }
 
 void PortDiscoveryTest::discardAccumulatedDataWhenOpeningANewPort()
@@ -455,26 +460,29 @@ void PortDiscoveryTest::discardAccumulatedDataWhenOpeningANewPort()
     portDiscoverer.start();
 
     // First is immediate
-    QCOMPARE(dataWrittenSpy1.count(), 1);
-    QCOMPARE(dataWrittenSpy1.at(0).at(0).toByteArray(), "$I\n");
+    QCOMPARE(dataWrittenSpy1.count(), 2);
+    QCOMPARE(dataWrittenSpy1.at(0).at(0).toByteArray(), "\xC0");
+    QCOMPARE(dataWrittenSpy1.at(1).at(0).toByteArray(), "$I\n");
 
     serialPort1->simulateReceivedData("[PolyShaper Oran");
 
     QVERIFY(dataWrittenSpy1.wait(250));
-    QCOMPARE(dataWrittenSpy1.at(1).at(0).toByteArray(), "$I\n");
+    QCOMPARE(dataWrittenSpy1.at(2).at(0).toByteArray(), "$I\n");
 
     QVERIFY(dataWrittenSpy1.wait(250));
-    QCOMPARE(dataWrittenSpy1.at(2).at(0).toByteArray(), "$I\n");
+    QCOMPARE(dataWrittenSpy1.at(3).at(0).toByteArray(), "$I\n");
 
     // Now it should move to the following port immediately, then continue via polling
     QVERIFY(dataWrittenSpy2.wait(250));
-    QCOMPARE(dataWrittenSpy2.at(0).at(0).toByteArray(), "$I\n");
+    QCOMPARE(dataWrittenSpy2.count(), 2);
+    QCOMPARE(dataWrittenSpy2.at(0).at(0).toByteArray(), "\xC0");
+    QCOMPARE(dataWrittenSpy2.at(1).at(0).toByteArray(), "$I\n");
 
     serialPort2->simulateReceivedData("je][1.2]ok\r\n");
 
     // Should not stop and continue polling
     QVERIFY(dataWrittenSpy2.wait(250));
-    QCOMPARE(dataWrittenSpy2.at(1).at(0).toByteArray(), "$I\n");
+    QCOMPARE(dataWrittenSpy2.at(2).at(0).toByteArray(), "$I\n");
     QCOMPARE(portFoundSpy.count(), 0);
 }
 
@@ -500,6 +508,50 @@ void PortDiscoveryTest::whenObtainPortIsCalledReturnPortAndDisconnectFromSignals
     // Sending data again, nothing should happen
     serialPort->simulateReceivedData("[PolyShaper Oranje][1.2]ok\r\n");
     QCOMPARE(spy.count(), 1);
+}
+
+void PortDiscoveryTest::deletePortAndContinueIfErrorSignalIsReceived()
+{
+    TestPortInfo portInfo(0x2341, 0x0043);
+    auto portListingFunction = [&portInfo]() {
+        return QList<TestPortInfo>{portInfo, TestPortInfo(1, 2), portInfo};
+    };
+    auto serialPort1 = new TestSerialPort();
+    auto serialPort2 = new TestSerialPort();
+    bool first = true;
+    auto serialPortFactory = [serialPort1, serialPort2, &first](TestPortInfo) {
+        if (first) {
+            first = false;
+            return std::unique_ptr<SerialPortInterface>(serialPort1);
+        } else {
+            return std::unique_ptr<SerialPortInterface>(serialPort2);
+        }
+    };
+
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3);
+
+    QSignalSpy dataWrittenSpy1(serialPort1, &TestSerialPort::dataWritten);
+    QSignalSpy portDeletedSpy(serialPort1, &TestSerialPort::destroyed);
+    QSignalSpy dataWrittenSpy2(serialPort2, &TestSerialPort::dataWritten);
+
+    portDiscoverer.start();
+
+    // First is immediate
+    QCOMPARE(dataWrittenSpy1.count(), 2);
+    QCOMPARE(dataWrittenSpy1.at(0).at(0).toByteArray(), "\xC0");
+    QCOMPARE(dataWrittenSpy1.at(1).at(0).toByteArray(), "$I\n");
+
+    // Port is in error
+    serialPort1->emitErrorSignal();
+    QCOMPARE(portDeletedSpy.count(), 1);
+
+    // Now it should move to the following port immediately, then continue via polling
+    QCOMPARE(dataWrittenSpy2.count(), 2);
+    QCOMPARE(dataWrittenSpy2.at(0).at(0).toByteArray(), "\xC0");
+    QCOMPARE(dataWrittenSpy2.at(1).at(0).toByteArray(), "$I\n");
+
+    QVERIFY(dataWrittenSpy2.wait(250));
+    QCOMPARE(dataWrittenSpy2.at(2).at(0).toByteArray(), "$I\n");
 }
 
 QTEST_GUILESS_MAIN(PortDiscoveryTest)
