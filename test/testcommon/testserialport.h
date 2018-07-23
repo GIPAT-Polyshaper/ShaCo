@@ -12,12 +12,12 @@ public:
     bool open() override;
     qint64 write(const QByteArray &data) override;
     QByteArray readAll() override;
-    bool inError() const override;
     QString errorString() const override;
     void close() override;
     QByteArray writtenData() const;
     void simulateReceivedData(QByteArray data);
-    void setInError(bool inError);
+    void setInError(bool inError); // Use this to have write return -1 and readAll an empty array
+    void emitErrorSignal();
 
 signals:
     void portOpened();

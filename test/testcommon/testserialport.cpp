@@ -14,6 +14,10 @@ bool TestSerialPort::open()
 
 qint64 TestSerialPort::write(const QByteArray &data)
 {
+    if (m_inError) {
+        return -1;
+    }
+
     m_writtenData += data;
 
     return data.size();
@@ -21,12 +25,11 @@ qint64 TestSerialPort::write(const QByteArray &data)
 
 QByteArray TestSerialPort::readAll()
 {
-    return m_readData;
-}
+    if (m_inError) {
+        return QByteArray();
+    }
 
-bool TestSerialPort::inError() const
-{
-    return m_inError;
+    return m_readData;
 }
 
 QString TestSerialPort::errorString() const
@@ -54,4 +57,9 @@ void TestSerialPort::simulateReceivedData(QByteArray data)
 void TestSerialPort::setInError(bool inError)
 {
     m_inError = inError;
+}
+
+void TestSerialPort::emitErrorSignal()
+{
+    emit errorOccurred();
 }

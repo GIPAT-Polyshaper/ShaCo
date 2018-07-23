@@ -143,6 +143,8 @@ void MachineCommunicationTest::ifPortIsInErrorAfterWriteClosePortAndEmitSignal()
     communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
     communicator.writeLine("some data to write");
 
+    serialPort->emitErrorSignal();
+
     QCOMPARE(spyPortDeleted.count(), 1);
     QCOMPARE(spyPortClosed.count(), 1);
     auto errorString = spyPortClosed.at(0).at(0).toString();
@@ -164,6 +166,8 @@ void MachineCommunicationTest::ifPortIsInErrorAfterReadClosePortAndEmitSignal()
 
     communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
     serialPort->simulateReceivedData("Toc toc...");
+
+    serialPort->emitErrorSignal();
 
     QCOMPARE(spyPortDeleted.count(), 1);
     QCOMPARE(spyPortClosed.count(), 1);

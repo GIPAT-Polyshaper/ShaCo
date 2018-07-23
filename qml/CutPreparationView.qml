@@ -102,7 +102,7 @@ ColumnLayout {
             Layout.fillWidth: false
             Layout.fillHeight: true
             Layout.margins: 3
-            enabled: controller.senderCreated
+            enabled: controller.senderCreated && controller.connected
             text: qsTr("Start!")
 
             onClicked: root.startCutRequested()

@@ -16,6 +16,7 @@ SerialPort::SerialPort(const QSerialPortInfo& portInfo)
     , m_serialPort(portInfo)
 {
     connect(&m_serialPort, &QSerialPort::readyRead, this, &SerialPort::dataAvailable);
+    connect(&m_serialPort, &QSerialPort::errorOccurred, this, &SerialPort::signalErrorOccurred);
 }
 
 bool SerialPort::open()
@@ -58,11 +59,6 @@ QByteArray SerialPort::readAll()
     return m_serialPort.readAll();
 }
 
-bool SerialPort::inError() const
-{
-    return m_serialPort.error() != QSerialPort::NoError;
-}
-
 QString SerialPort::errorString() const
 {
     return m_serialPort.errorString();
@@ -71,4 +67,13 @@ QString SerialPort::errorString() const
 void SerialPort::close()
 {
     m_serialPort.close();
+}
+
+void SerialPort::signalErrorOccurred(QSerialPort::SerialPortError error)
+{
+    // We only want to signal error if there was a real error (it seems the signal is emitted also
+    // when no error occurs)
+    if (error != QSerialPort::SerialPortError::NoError) {
+        emit errorOccurred();
+    }
 }

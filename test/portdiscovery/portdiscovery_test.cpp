@@ -60,16 +60,9 @@ public:
         return m_readData;
     }
 
-    bool inError() const override // Not used in this test
-    {
-        throw QString("inError should not be used in this test!!!");
-        return true;
-    }
-
     QString errorString() const override // Not used in this test
     {
         throw QString("errorString should not be used in this test!!!");
-        return QString();
     }
 
     void close() override // Not used in this test
@@ -82,6 +75,11 @@ public:
         m_readData = data;
 
         emit dataAvailable();
+    }
+
+    void emitErrorSignal()
+    {
+        emit errorOccurred();
     }
 
 signals:
@@ -117,6 +115,7 @@ private Q_SLOTS:
     void continueWithNextPortAfterFailingTheMaximumNumberOfAttemptsOnAPort();
     void discardAccumulatedDataWhenOpeningANewPort();
     void whenObtainPortIsCalledReturnPortAndDisconnectFromSignals();
+    void deletePortAndContinueIfErrorSignalIsReceived();
 };
 
 PortDiscoveryTest::PortDiscoveryTest()
@@ -509,6 +508,50 @@ void PortDiscoveryTest::whenObtainPortIsCalledReturnPortAndDisconnectFromSignals
     // Sending data again, nothing should happen
     serialPort->simulateReceivedData("[PolyShaper Oranje][1.2]ok\r\n");
     QCOMPARE(spy.count(), 1);
+}
+
+void PortDiscoveryTest::deletePortAndContinueIfErrorSignalIsReceived()
+{
+    TestPortInfo portInfo(0x2341, 0x0043);
+    auto portListingFunction = [&portInfo]() {
+        return QList<TestPortInfo>{portInfo, TestPortInfo(1, 2), portInfo};
+    };
+    auto serialPort1 = new TestSerialPort();
+    auto serialPort2 = new TestSerialPort();
+    bool first = true;
+    auto serialPortFactory = [serialPort1, serialPort2, &first](TestPortInfo) {
+        if (first) {
+            first = false;
+            return std::unique_ptr<SerialPortInterface>(serialPort1);
+        } else {
+            return std::unique_ptr<SerialPortInterface>(serialPort2);
+        }
+    };
+
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3);
+
+    QSignalSpy dataWrittenSpy1(serialPort1, &TestSerialPort::dataWritten);
+    QSignalSpy portDeletedSpy(serialPort1, &TestSerialPort::destroyed);
+    QSignalSpy dataWrittenSpy2(serialPort2, &TestSerialPort::dataWritten);
+
+    portDiscoverer.start();
+
+    // First is immediate
+    QCOMPARE(dataWrittenSpy1.count(), 2);
+    QCOMPARE(dataWrittenSpy1.at(0).at(0).toByteArray(), "\xC0");
+    QCOMPARE(dataWrittenSpy1.at(1).at(0).toByteArray(), "$I\n");
+
+    // Port is in error
+    serialPort1->emitErrorSignal();
+    QCOMPARE(portDeletedSpy.count(), 1);
+
+    // Now it should move to the following port immediately, then continue via polling
+    QCOMPARE(dataWrittenSpy2.count(), 2);
+    QCOMPARE(dataWrittenSpy2.at(0).at(0).toByteArray(), "\xC0");
+    QCOMPARE(dataWrittenSpy2.at(1).at(0).toByteArray(), "$I\n");
+
+    QVERIFY(dataWrittenSpy2.wait(250));
+    QCOMPARE(dataWrittenSpy2.at(2).at(0).toByteArray(), "$I\n");
 }
 
 QTEST_GUILESS_MAIN(PortDiscoveryTest)
