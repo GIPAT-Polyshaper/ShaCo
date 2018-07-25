@@ -170,6 +170,8 @@ void GCodeSender::finishStreaming()
 
 bool GCodeSender::canSuccessfullyFinishStreaming() const
 {
+    // qDebug() << "Acks to receive:" << m_expectedAcks << "running?" << m_running;
+
     return m_device && m_device->atEnd() && m_running && m_expectedAcks == 0 &&
             m_machineStatusMonitor->state() == MachineState::Idle;
 }
