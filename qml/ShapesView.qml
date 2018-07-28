@@ -5,13 +5,10 @@ import QtQuick.Layouts 1.3
 ColumnLayout{
     id: root
 
-    property var shapesInfo
     property var hoveredComponent
     // These must be realtive to the grid frame of reference
     property real detailsX: 0
     property real detailsY: 0
-    property bool showPersonalCategory: false
-    property string currentCategory: showPersonalCategory ? "Personal" : "3D Puzzle"
 
     function selectedItem() {
         return grid.model.get(grid.currentIndex)
@@ -34,101 +31,6 @@ ColumnLayout{
             timer.stop()
         } else {
             detailsDialog.visible = false
-        }
-    }
-
-    onShapesInfoChanged: generateModel()
-    onCurrentCategoryChanged: generateModel()
-
-    function generateModel() {
-        var modelString = "import QtQuick 2.4; ListModel{"
-        for(var s in shapesInfo) {
-            var curShape = shapesInfo[s]
-
-            if (curShape.category === root.currentCategory) {
-                modelString += "ListElement{" +
-                        "name:\"" + curShape.name + "\";" +
-                        "description:\"" + curShape.description + "\";" +
-                        "image:\"" + curShape.image + "\";" +
-                        "category:\"" + curShape.category + "\";" +
-                        "workingTime:\"" + curShape.workingTime + "\";" +
-                        "originalSize:\"" + curShape.originalSize + "\";" +
-                        "}"
-            }
-        }
-        modelString += "}"
-        grid.model = Qt.createQmlObject(modelString, grid, "dynamic grid view model")
-    }
-
-    ButtonGroup {
-        id: categoryGroup
-    }
-
-    RowLayout {
-        id: header
-        Layout.fillHeight: false
-        Layout.preferredHeight: 40
-        Layout.fillWidth: true
-
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-        }
-
-        Button {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-            visible: root.showPersonalCategory
-            text: qsTr("Personal")
-            flat: true
-            checkable: true
-            checked: root.showPersonalCategory
-            ButtonGroup.group: categoryGroup
-
-            onCheckedChanged: if (checked) root.currentCategory = "Personal"
-        }
-
-        Button {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-            text: qsTr("3D Puzzle")
-            flat: true
-            checkable: true
-            checked: !root.showPersonalCategory
-            ButtonGroup.group: categoryGroup
-
-            onCheckedChanged: if (checked) root.currentCategory = "3D Puzzle"
-        }
-
-        Button {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-            text: qsTr("Stencil")
-            flat: true
-            checkable: true
-            ButtonGroup.group: categoryGroup
-
-            onCheckedChanged: if (checked) root.currentCategory = "Stencil"
-        }
-
-        Button {
-            Layout.fillHeight: true
-            Layout.fillWidth: false
-            Layout.margins: 3
-            text: qsTr("Decor")
-            flat: true
-            checkable: true
-            ButtonGroup.group: categoryGroup
-
-            onCheckedChanged: if (checked) root.currentCategory = "Decor"
-        }
-
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
         }
     }
 

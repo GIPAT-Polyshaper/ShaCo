@@ -33,22 +33,26 @@ ColumnLayout {
 
     Connections {
         target: controller
-        onDataSent: {
-            textArea.appendText("▶" + data)
-            textAreaScroll.toEnd()
-        }
-        onDataReceived: {
-            textArea.appendText("◀" + data)
-            textAreaScroll.toEnd()
-        }
-        onPortClosedWithError: {
-            textArea.appendText("--------\n")
-            textAreaScroll.toEnd()
-        }
-        onPortClosed: {
-            textArea.appendText("--------\n")
-            textAreaScroll.toEnd()
-        }
+        onDataSent:
+            if (terminalEnabled.checked) {
+                textArea.appendText("▶" + data)
+                textAreaScroll.toEnd()
+            }
+        onDataReceived:
+            if (terminalEnabled.checked) {
+                textArea.appendText("◀" + data)
+                textAreaScroll.toEnd()
+            }
+        onPortClosedWithError:
+            if (terminalEnabled.checked) {
+                textArea.appendText("--------\n")
+                textAreaScroll.toEnd()
+            }
+        onPortClosed:
+            if (terminalEnabled.checked) {
+                textArea.appendText("--------\n")
+                textAreaScroll.toEnd()
+            }
     }
 
     ScrollView {
@@ -80,7 +84,6 @@ ColumnLayout {
             }
         }
     }
-
 
     RowLayout {
         Layout.fillHeight: false
@@ -116,7 +119,7 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
-            enabled: controller.connected && !controller.streamingGCode
+            enabled: controller.connected && !controller.streamingGCode && terminalEnabled.checked
 
             text: qsTr("Send")
 
@@ -124,6 +127,19 @@ ColumnLayout {
                 controller.sendLine(textField.text)
                 textField.text = ""
             }
+        }
+
+        Button {
+            id: terminalEnabled
+
+            Layout.fillHeight: true
+            Layout.fillWidth: false
+            Layout.margins: 3
+            checkable: true
+            checked: false
+            enabled: true
+
+            text: checked ? qsTr("Enabled") : qsTr("Enable")
         }
     }
 

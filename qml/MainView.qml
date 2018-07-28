@@ -27,9 +27,11 @@ ColumnLayout {
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
-        showPersonalCategory: true
+    }
 
-        shapesInfo: []
+    SortControl {
+        Layout.fillWidth: true
+        Layout.fillHeight: false
     }
 
     RowLayout {
@@ -42,6 +44,7 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.margins: 3
             text: qsTr("Shape Library")
+            enabled: false
 
             onClicked: root.shapeLibraryRequested()
         }

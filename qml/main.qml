@@ -12,8 +12,6 @@ Window {
     title: qsTr("ShaCo")
 
     property string statusText: ""
-    property bool showSortControl: false
-    property string sortType: "local"
     property string machineName: ""
     property string firmwareVersion: ""
 
@@ -126,13 +124,6 @@ Window {
                 text: "<b><i>" + root.statusText + "</b></i>"
             }
 
-            SortControl {
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                visible: root.showSortControl
-                sortType: root.sortType
-            }
-
             Timer {
                 id: logoAnimationTimer
                 interval: 100
@@ -190,8 +181,6 @@ Window {
 
         onVisibleChanged:
             if (visible) {
-                root.showSortControl = true
-                root.sortType = "local"
                 root.statusText = qsTr("Your shapes")
             }
     }
@@ -201,15 +190,8 @@ Window {
         visible: false
         onBack: stack.pop()
 
-        onDownload: {
-            mainView.addShape(shape)
-            stack.pop()
-        }
-
         onVisibleChanged:
             if (visible) {
-                root.showSortControl = true
-                root.sortType = "shapeLibrary"
                 root.statusText = qsTr("Shape library")
             }
     }
@@ -225,7 +207,6 @@ Window {
 
         onVisibleChanged:
             if (visible) {
-                root.showSortControl = false
                 root.statusText = qsTr("Preparing to cut")
                 cutPreparationView.itemToCut = mainView.selectedItem()
             }
@@ -238,7 +219,6 @@ Window {
 
         onVisibleChanged:
             if (visible) {
-                root.showSortControl = false
                 root.statusText = Qt.binding(function() {
                     return controller.streamingGCode ? qsTr("Cutting...") : qsTr("Cut Completed")
                 })
@@ -253,7 +233,6 @@ Window {
 
         onVisibleChanged:
             if (visible) {
-                root.showSortControl = false
                 root.statusText = qsTr("Terminal")
             }
     }
