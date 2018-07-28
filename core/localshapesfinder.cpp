@@ -5,6 +5,9 @@ LocalShapesFinder::LocalShapesFinder(QString path)
     : m_watcher(QStringList{path})
 {
     connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, &LocalShapesFinder::rescanDirectory);
+
+    // Load initial dir content
+    rescanDirectory(path);
 }
 
 const QMap<QString, ShapeInfo>& LocalShapesFinder::shapes() const

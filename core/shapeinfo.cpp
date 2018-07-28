@@ -48,6 +48,7 @@ ShapeInfo ShapeInfo::createFromFile(QString filename)
     try {
         return ShapeInfo(
             version,
+            extractField<QString>(obj, "name", &QJsonValue::isString, [](const QJsonValue& v){return v.toString();}),
             extractField<QString>(obj, "svgFilename", &QJsonValue::isString, [](const QJsonValue& v){return v.toString();}),
             extractField<bool>(obj, "square", &QJsonValue::isBool, [](const QJsonValue& v){return v.toBool();}),
             extractField<QString>(obj, "machineType", &QJsonValue::isString, [](const QJsonValue& v){return v.toString();}),
@@ -93,6 +94,7 @@ ShapeInfo ShapeInfo::createFromFile(QString filename)
 ShapeInfo::ShapeInfo()
     : m_isValid(false)
     , m_version(0)
+    , m_name()
     , m_svgFilename()
     , m_square(false)
     , m_machineType()
@@ -111,13 +113,14 @@ ShapeInfo::ShapeInfo()
 {
 }
 
-ShapeInfo::ShapeInfo(unsigned int version, QString svgFilename, bool square, QString machineType,
-                     bool drawToolpath, double margin, QString generatedBy, QDateTime creationTime,
-                     double flatness, double workpieceDimX, double workpieceDimY,
-                     bool autoClosePath, unsigned int duration, bool pointsInsideWorkpiece,
-                     double speed, QString gcodeFilename)
+ShapeInfo::ShapeInfo(unsigned int version, QString name, QString svgFilename, bool square,
+                     QString machineType, bool drawToolpath, double margin, QString generatedBy,
+                     QDateTime creationTime, double flatness, double workpieceDimX,
+                     double workpieceDimY, bool autoClosePath, unsigned int duration,
+                     bool pointsInsideWorkpiece, double speed, QString gcodeFilename)
     : m_isValid(true)
     , m_version(version)
+    , m_name(name)
     , m_svgFilename(svgFilename)
     , m_square(square)
     , m_machineType(machineType)

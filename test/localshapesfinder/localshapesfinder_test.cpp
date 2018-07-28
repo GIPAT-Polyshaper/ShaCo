@@ -35,6 +35,7 @@ private Q_SLOTS:
     void emitSignalWhenShapesAreRemoved();
     void removeAllShapesIfDirectoryIsRemoved();
     void doNotEmitSignalIfDirectoryRemovedAndThereIsNoShape();
+    void loadFilesFromDirAtAstart();
 };
 
 LocalShapesFinderTest::LocalShapesFinderTest()
@@ -50,6 +51,7 @@ void LocalShapesFinderTest::createFiles(unsigned int startIndex, unsigned int co
 {
   "version": 1,
   "svgFilename": ")" + svgFilename + R"(",
+  "name": "sandman",
   "square": true,
   "machineType": "PolyShaperOranje",
   "drawToolpath": true,
@@ -397,6 +399,18 @@ void LocalShapesFinderTest::doNotEmitSignalIfDirectoryRemovedAndThereIsNoShape()
 
     // No signal emitted
     QVERIFY(!spy.wait(500));
+}
+
+void LocalShapesFinderTest::loadFilesFromDirAtAstart()
+{
+    createFiles(0, 3);
+
+    LocalShapesFinder finder(m_dir->path());
+
+    QCOMPARE(finder.shapes().size(), 3);
+    QVERIFY(finder.shapes().contains(m_dir->path() + "/tmpTest-0.psj"));
+    QVERIFY(finder.shapes().contains(m_dir->path() + "/tmpTest-1.psj"));
+    QVERIFY(finder.shapes().contains(m_dir->path() + "/tmpTest-2.psj"));
 }
 
 QTEST_GUILESS_MAIN(LocalShapesFinderTest)

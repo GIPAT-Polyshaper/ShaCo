@@ -13,10 +13,10 @@ public:
     ShapeInfo();
 
 private:
-    ShapeInfo(unsigned int version, QString svgFilename, bool square, QString machineType,
-              bool drawToolpath, double margin, QString generatedBy, QDateTime creationTime,
-              double flatness, double workpieceDimX, double workpieceDimY, bool autoClosePath,
-              unsigned int duration, bool pointsInsideWorkpiece, double speed,
+    ShapeInfo(unsigned int version, QString name, QString svgFilename, bool square,
+              QString machineType, bool drawToolpath, double margin, QString generatedBy,
+              QDateTime creationTime, double flatness, double workpieceDimX, double workpieceDimY,
+              bool autoClosePath, unsigned int duration, bool pointsInsideWorkpiece, double speed,
               QString gcodeFilename);
 
 public:
@@ -28,6 +28,11 @@ public:
     unsigned int version() const
     {
         return m_version;
+    }
+
+    QString name() const
+    {
+        return m_name;
     }
 
     QString svgFilename() const
@@ -108,6 +113,7 @@ public:
 private:
     bool m_isValid;
     unsigned int m_version;
+    QString m_name;
     QString m_svgFilename;
     bool m_square;
     QString m_machineType;

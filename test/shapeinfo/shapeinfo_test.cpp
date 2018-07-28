@@ -57,6 +57,7 @@ void ShapeInfoTest::createShapeFromFile()
     QByteArray content = R"(
 {
   "version": 1,
+  "name": "sandman",
   "svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg",
   "square": true,
   "machineType": "PolyShaperOranje",
@@ -79,6 +80,7 @@ void ShapeInfoTest::createShapeFromFile()
 
     QVERIFY(info.isValid());
     QCOMPARE(info.version(), 1u);
+    QCOMPARE(info.name(), "sandman");
     QCOMPARE(info.svgFilename(), "/home/tommy/PolyShaper/polyshaper-000.svg");
     QCOMPARE(info.square(), true);
     QCOMPARE(info.machineType(), "PolyShaperOranje");
@@ -111,6 +113,7 @@ void ShapeInfoTest::createInvalidShapeIfVersionIsUnknown()
     QByteArray content = R"(
 {
   "version": 999999,
+  "name": "sandman",
   "svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg",
   "square": true,
   "machineType": "PolyShaperOranje",
@@ -137,6 +140,7 @@ void ShapeInfoTest::createInvalidShapeIfVersionIsUnknown()
 void ShapeInfoTest::createInvalidShapeIfAnyFieldIsMissing()
 {
     QList<QByteArray> fields{
+        R"("name": "sandman")",
         R"("svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg")",
         R"("square": true)",
         R"("machineType": "PolyShaperOranje")",
@@ -173,6 +177,7 @@ void ShapeInfoTest::createInvalidShapeIfAnyFieldIsMissing()
 void ShapeInfoTest::createInvalidShapeIfAnyFielsHasInvalidType()
 {
     QList<QByteArray> validFields{
+        R"("name": "sandman")",
         R"("svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg")",
         R"("square": true)",
         R"("machineType": "PolyShaperOranje")",
@@ -191,6 +196,7 @@ void ShapeInfoTest::createInvalidShapeIfAnyFielsHasInvalidType()
     };
 
     QList<QByteArray> invalidFields{
+        R"("name": 1)",
         R"("svgFilename": 1)",
         R"("square": 1)",
         R"("machineType": 1)",
@@ -231,6 +237,7 @@ void ShapeInfoTest::createInvalidShapeIfCreationDateFormatIsInvalid()
     QByteArray content = R"(
 {
   "version": 1,
+  "name": "sandman",
   "svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg",
   "square": true,
   "machineType": "PolyShaperOranje",
@@ -259,6 +266,7 @@ void ShapeInfoTest::createInvalidShapeIfDurationIsNegative()
     QByteArray content = R"(
 {
   "version": 1,
+  "name": "sandman",
   "svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg",
   "square": true,
   "machineType": "PolyShaperOranje",
@@ -287,6 +295,7 @@ void ShapeInfoTest::createInvalidShapeIfDurationIsNotInt()
     QByteArray content = R"(
 {
   "version": 1,
+  "name": "sandman",
   "svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg",
   "square": true,
   "machineType": "PolyShaperOranje",
