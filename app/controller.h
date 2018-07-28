@@ -6,6 +6,7 @@
 #include <QSerialPortInfo>
 #include <QUrl>
 #include "worker.h"
+#include "core/localshapesfinder.h"
 
 class WorkerThread;
 
@@ -80,6 +81,7 @@ private:
     bool m_stoppingStreaming;
     bool m_paused;
     bool m_senderCreated;
+    LocalShapesFinder m_shapesFinder;
 };
 
 #endif // CONTROLLER_H

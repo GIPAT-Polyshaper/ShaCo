@@ -1,6 +1,7 @@
 #include "controller.h"
 #include <memory>
 #include <QMetaObject>
+#include <QDir>
 
 Controller::Controller(QObject *parent)
     : QObject(parent)
@@ -10,6 +11,7 @@ Controller::Controller(QObject *parent)
     , m_stoppingStreaming(false)
     , m_paused(false)
     , m_senderCreated(false)
+    , m_shapesFinder(QDir::homePath() + "/PolyShaper")
 {
     m_thread.start();
 }

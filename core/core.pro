@@ -19,7 +19,9 @@ HEADERS += \
     machinestate.h \
     machinestatusmonitor.h \
     commandsender.h \
-    immediatecommands.h
+    immediatecommands.h \
+    localshapesfinder.h \
+    shapeinfo.h
 SOURCES += \
     serialport.cpp \
     machineinfo.cpp \
@@ -28,4 +30,6 @@ SOURCES += \
     wirecontroller.cpp \
     machinestate.cpp \
     machinestatusmonitor.cpp \
-    commandsender.cpp
+    commandsender.cpp \
+    localshapesfinder.cpp \
+    shapeinfo.cpp
