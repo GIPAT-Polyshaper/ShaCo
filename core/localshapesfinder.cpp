@@ -46,7 +46,9 @@ void LocalShapesFinder::rescanDirectory(QString path)
         m_shapes.remove(toRemove);
     }
 
-    emit shapesUpdated(newShapes, missingShapes);
+    if (!newShapes.isEmpty() || !missingShapes.isEmpty()) {
+        emit shapesUpdated(newShapes, missingShapes);
+    }
 }
 
 bool LocalShapesFinder::dirRemoved(QDir& dir)

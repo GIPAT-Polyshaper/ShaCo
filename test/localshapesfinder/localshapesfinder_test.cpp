@@ -36,6 +36,7 @@ private Q_SLOTS:
     void removeAllShapesIfDirectoryIsRemoved();
     void doNotEmitSignalIfDirectoryRemovedAndThereIsNoShape();
     void loadFilesFromDirAtAstart();
+    void doNotEmitSignalsIfThereIsNoChange();
 };
 
 LocalShapesFinderTest::LocalShapesFinderTest()
@@ -138,6 +139,7 @@ void LocalShapesFinderTest::testQFileSysteWatcherUsage()
     QCOMPARE(spy.at(4).at(0).toString(), m_dir->path());
 
     // Recreate watched directory, no signal
+    QThread::sleep(1);// Needed to have test pass on windows (mkdir might fail otherwise)
     QVERIFY(curDir.mkdir(m_dir->path()));
     QVERIFY(!spy.wait(500));
 }
@@ -256,10 +258,14 @@ void LocalShapesFinderTest::emitSignalWhenShapesAreFirstFound()
     // This is needed to process events from QFileWatcher
     QVERIFY(spy.wait(500));
 
-    QCOMPARE(spy.count(), 1);
     QSet<QString> expectedNewShapes{m_dir->path() + "/tmpTest-0.psj", m_dir->path() + "/tmpTest-1.psj", m_dir->path() + "/tmpTest-2.psj"};
-    QCOMPARE(spy.at(0).at(0).value<QSet<QString>>(), expectedNewShapes);
-    QVERIFY(spy.at(0).at(1).value<QSet<QString>>().isEmpty());
+    // Collect all new shapes (on windows we might receive multiple signals)
+    QSet<QString> newShapes;
+    for (auto s: spy) {
+        newShapes.unite(s.at(0).value<QSet<QString>>());
+        QVERIFY(s.at(1).value<QSet<QString>>().isEmpty());
+    }
+    QCOMPARE(newShapes, expectedNewShapes);
 }
 
 void LocalShapesFinderTest::onlyLoadNewFilesOnSubsequentCallsToRescanDirectory()
@@ -298,7 +304,8 @@ void LocalShapesFinderTest::emitSignalWhenNewShapesAreFound()
     // This is needed to process events from QFileWatcher
     QVERIFY(spy.wait(500));
 
-    QCOMPARE(spy.count(), 1);
+    QVERIFY(spy.count() > 0);
+    const auto oldSignals = spy.count();
 
     // New files added
     createFiles(50, 2);
@@ -307,9 +314,13 @@ void LocalShapesFinderTest::emitSignalWhenNewShapesAreFound()
     QVERIFY(spy.wait(500));
 
     QSet<QString> expectedNewShapes{m_dir->path() + "/tmpTest-50.psj", m_dir->path() + "/tmpTest-51.psj"};
-    QCOMPARE(spy.count(), 2);
-    QCOMPARE(spy.at(1).at(0).value<QSet<QString>>(), expectedNewShapes);
-    QVERIFY(spy.at(1).at(1).value<QSet<QString>>().isEmpty());
+    // Collect all new shapes (on windows we might receive multiple signals)
+    QSet<QString> newShapes;
+    for (auto i = oldSignals; i < spy.count(); ++i) {
+        newShapes.unite(spy.at(i).at(0).value<QSet<QString>>());
+        QVERIFY(spy.at(i).at(1).value<QSet<QString>>().isEmpty());
+    }
+    QCOMPARE(newShapes, expectedNewShapes);
 }
 
 void LocalShapesFinderTest::removeShapesThatNoLongerExist()
@@ -327,6 +338,7 @@ void LocalShapesFinderTest::removeShapesThatNoLongerExist()
     QVERIFY(QFile::remove(m_dir->path() + "/tmpTest-1.psj"));
 
     // This is needed to process events from QFileWatcher
+    QThread::sleep(1); // This is needed on windows
     QCoreApplication::processEvents();
 
     QCOMPARE(finder.shapes().size(), 2);
@@ -345,7 +357,8 @@ void LocalShapesFinderTest::emitSignalWhenShapesAreRemoved()
     // This is needed to process events from QFileWatcher
     QVERIFY(spy.wait(500));
 
-    QCOMPARE(spy.count(), 1);
+    QVERIFY(spy.count() > 0);
+    const auto oldSignals = spy.count();
 
     // Remove files and rescan
     QVERIFY(QFile::remove(m_dir->path() + "/tmpTest-1.psj"));
@@ -355,9 +368,13 @@ void LocalShapesFinderTest::emitSignalWhenShapesAreRemoved()
     QVERIFY(spy.wait(500));
 
     QSet<QString> expectedRemovedShapes{m_dir->path() + "/tmpTest-1.psj", m_dir->path() + "/tmpTest-2.psj"};
-    QCOMPARE(spy.count(), 2);
-    QVERIFY(spy.at(1).at(0).value<QSet<QString>>().isEmpty());
-    QCOMPARE(spy.at(1).at(1).value<QSet<QString>>(), expectedRemovedShapes);
+    // Collect all removed shapes (on windows we might receive multiple signals)
+    QSet<QString> removedShapes;
+    for (auto i = oldSignals; i < spy.count(); ++i) {
+        QVERIFY(spy.at(i).at(0).value<QSet<QString>>().isEmpty());
+        removedShapes.unite(spy.at(i).at(1).value<QSet<QString>>());
+    }
+    QCOMPARE(removedShapes, expectedRemovedShapes);
 }
 
 void LocalShapesFinderTest::removeAllShapesIfDirectoryIsRemoved()
@@ -371,7 +388,8 @@ void LocalShapesFinderTest::removeAllShapesIfDirectoryIsRemoved()
     // This is needed to process events from QFileWatcher
     QVERIFY(spy.wait(500));
 
-    QCOMPARE(spy.count(), 1);
+    QVERIFY(spy.count() > 0);
+    const auto oldSignals = spy.count();
 
     // Remove directory (save path to use it later)
     auto path = m_dir->path();
@@ -381,9 +399,13 @@ void LocalShapesFinderTest::removeAllShapesIfDirectoryIsRemoved()
     QVERIFY(spy.wait(500));
 
     QSet<QString> expectedRemovedShapes{path + "/tmpTest-0.psj", path + "/tmpTest-1.psj", path + "/tmpTest-2.psj"};
-    QCOMPARE(spy.count(), 2);
-    QVERIFY(spy.at(1).at(0).value<QSet<QString>>().isEmpty());
-    QCOMPARE(spy.at(1).at(1).value<QSet<QString>>(), expectedRemovedShapes);
+    // Collect all removed shapes (on windows we might receive multiple signals)
+    QSet<QString> removedShapes;
+    for (auto i = oldSignals; i < spy.count(); ++i) {
+        QVERIFY(spy.at(i).at(0).value<QSet<QString>>().isEmpty());
+        removedShapes.unite(spy.at(i).at(1).value<QSet<QString>>());
+    }
+    QCOMPARE(removedShapes, expectedRemovedShapes);
 
     QCOMPARE(finder.shapes().size(), 0);
 }
@@ -394,7 +416,10 @@ void LocalShapesFinderTest::doNotEmitSignalIfDirectoryRemovedAndThereIsNoShape()
 
     QSignalSpy spy(&finder, &LocalShapesFinder::shapesUpdated);
 
-    // Remove directory (save path to use it later)
+    // Discard initial signals we might receive (especially on Windows)
+    QThread::sleep(1);
+    QCoreApplication::processEvents();
+
     m_dir.reset();
 
     // No signal emitted
@@ -411,6 +436,28 @@ void LocalShapesFinderTest::loadFilesFromDirAtAstart()
     QVERIFY(finder.shapes().contains(m_dir->path() + "/tmpTest-0.psj"));
     QVERIFY(finder.shapes().contains(m_dir->path() + "/tmpTest-1.psj"));
     QVERIFY(finder.shapes().contains(m_dir->path() + "/tmpTest-2.psj"));
+}
+
+void LocalShapesFinderTest::doNotEmitSignalsIfThereIsNoChange()
+{
+    // Here we add and remove a fiel, we should receive no signal (on Windows a
+    // notification might arrive, we must discard it)
+
+    LocalShapesFinder finder(m_dir->path());
+
+    QSignalSpy spy(&finder, &LocalShapesFinder::shapesUpdated);
+
+    createFiles(0, 3);
+
+    // This is needed to process events from QFileWatcher
+    QVERIFY(spy.wait(500));
+
+    // Create and remove a file
+    createFiles(5, 1);
+    QFile::remove(m_dir->path() + "/tmpTest-5.psj");
+
+    // There must be no notification
+    QVERIFY(!spy.wait(500));
 }
 
 QTEST_GUILESS_MAIN(LocalShapesFinderTest)
