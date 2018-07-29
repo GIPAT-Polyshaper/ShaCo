@@ -27,13 +27,14 @@ void LocalShapesFinder::rescanDirectory(QString path)
     QSet<QString> missingShapes(m_shapes.keys().toSet());
     for (const auto& info: dir.entryInfoList(QStringList() << "*.psj", QDir::Files)) {
         const auto& shapeFile = info.canonicalFilePath();
-        auto shapeInfo = ShapeInfo::createFromFile(shapeFile);
-
-        if (!validShape(shapeInfo)) {
-            continue;
-        }
 
         if (!m_shapes.contains(shapeFile)) {
+            auto shapeInfo = ShapeInfo::createFromFile(shapeFile);
+
+            if (!validShape(shapeInfo)) {
+                continue;
+            }
+
             newShapes.insert(shapeFile);
             m_shapes[shapeFile] = shapeInfo;
         }
