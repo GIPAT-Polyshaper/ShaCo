@@ -14,9 +14,6 @@ ColumnLayout {
         Layout.fillHeight: true
         Layout.fillWidth: true
         Layout.margins: 3
-        showPersonalCategory: false
-
-        shapesInfo: []
     }
 
     RowLayout {
@@ -43,7 +40,7 @@ ColumnLayout {
             Layout.margins: 3
             text: qsTr("Download")
 
-            onClicked: root.download(shapesView.selectedItem())
+            // onClicked: controller.download???
         }
     }
 }

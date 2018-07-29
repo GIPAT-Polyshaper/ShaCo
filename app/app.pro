@@ -8,14 +8,16 @@ TARGET = ShaCo
 QT += quick quickcontrols2 serialport
 app.depends = core
 
+HEADERS += \
+    controller.h \
+    worker.h \
+    localshapesmodel.h
 SOURCES += main.cpp \
     controller.cpp \
-    worker.cpp
+    worker.cpp \
+    localshapesmodel.cpp
+
 unix:LIBS += -L../core -lcore
 win32:debug:LIBS += -L../core/debug -lcore
 win32:release:LIBS += -L../core/release -lcore
 RESOURCES += ../qml.qrc
-
-HEADERS += \
-    controller.h \
-    worker.h
