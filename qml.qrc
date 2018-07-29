@@ -9,6 +9,7 @@
         <file alias="SortControl.qml">qml/SortControl.qml</file>
         <file alias="TerminalView.qml">qml/TerminalView.qml</file>
         <file alias="ShapesView.qml">qml/ShapesView.qml</file>
+        <file alias="shacoutils.js">qml/shacoutils.js</file>
         <file>images/logo.png</file>
         <file>images/move_to_start.gif</file>
         <file>images/gears.gif</file>

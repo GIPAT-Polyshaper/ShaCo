@@ -1,6 +1,7 @@
 import QtQuick 2.4
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
+import "shacoutils.js" as ShaCoUtils
 
 ColumnLayout {
     id: root
@@ -44,8 +45,8 @@ ColumnLayout {
                           "<b>" + qsTr("Preview not available") + "</b>" :
                           "<b>" + root.itemToCut.name + "</b><br>" +
                           root.itemToCut.description + "<br>" +
-                          qsTr("Working time") + ": " + root.itemToCut.durationStr + "<br>" +
-                          qsTr("Panel size") + ": " + root.itemToCut.panelSize
+                          qsTr("Working time") + ": " + ShaCoUtils.secondsToMMSS(root.itemToCut.duration) + "<br>" +
+                          qsTr("Panel size") + ": " + ShaCoUtils.panelSize(root.itemToCut.panelX, root.itemToCut.panelY)
             }
         }
     }

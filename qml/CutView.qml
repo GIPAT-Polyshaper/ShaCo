@@ -1,6 +1,7 @@
 import QtQuick 2.4
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
+import "shacoutils.js" as ShaCoUtils
 
 ColumnLayout {
     id: root
@@ -15,11 +16,7 @@ ColumnLayout {
         if (progress > itemToCut.duration) {
             return qsTr("Unknown")
         } else {
-            var remainingSec = Math.floor(itemToCut.duration - progress)
-            var durationMin = Math.floor(remainingSec / 60)
-            var durationSec = remainingSec % 60
-
-            return durationMin + ":" + (durationSec < 10 ? "0" + durationSec : durationSec)
+            return ShaCoUtils.secondsToMMSS(itemToCut.duration - progress)
         }
     }
 
