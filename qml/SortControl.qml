@@ -24,15 +24,11 @@ RowLayout {
             ListElement { filter: "z-a"; name: qsTr("Z...A") }
         }
 
-        onActivated: {
-            console.log(model.get(currentIndex).filter)
-            //controller.changeShapesSort()
-        }
+        onActivated: controller.changeLocalShapesSort(model.get(currentIndex).filter)
 
         onVisibleChanged:
             if (visible) {
-                console.log(model.get(currentIndex).filter)
-                //controller.changeShapesSort()
+                controller.changeLocalShapesSort(model.get(currentIndex).filter)
             }
     }
 }

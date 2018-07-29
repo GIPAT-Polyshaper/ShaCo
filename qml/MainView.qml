@@ -10,16 +10,8 @@ ColumnLayout {
     signal startCuttingRequested
     signal goToCuttingView
 
-    function selectedItem() {
-        return shapesView.selectedItem()
-    }
-
-    function addShape(shape) {
-        // This is to trigger a shapesInfoChanged signal in shapesView
-        var curShapes = shapesView.shapesInfo
-        curShapes.push(shape)
-        shapesView.shapesInfo = curShapes
-    }
+    property alias selectedItem: shapesView.selectedItem
+    property bool fileImported: false
 
     ShapesView {
         id: shapesView
@@ -69,10 +61,14 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.margins: 3
             text: qsTr("Start cutting")
-            enabled: false //controller.connected
+            enabled: controller.connected && shapesView.selectedItem !== null
             visible: !controller.streamingGCode
 
-            onClicked: root.startCuttingRequested()
+            onClicked: {
+                controller.setGCodeFile(shapesView.selectedItem.gcode)
+                fileImported = false
+                root.startCuttingRequested()
+            }
         }
 
         Button {
@@ -97,6 +93,7 @@ ColumnLayout {
 
         onAccepted: {
             controller.setGCodeFile(fileUrl)
+            fileImported = true
             root.startCuttingRequested()
         }
     }

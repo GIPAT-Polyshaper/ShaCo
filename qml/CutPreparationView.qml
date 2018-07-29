@@ -44,9 +44,8 @@ ColumnLayout {
                           "<b>" + qsTr("Preview not available") + "</b>" :
                           "<b>" + root.itemToCut.name + "</b><br>" +
                           root.itemToCut.description + "<br>" +
-                          qsTr("Category") + ": <i>" + root.itemToCut.category + "</i><br>" +
-                          qsTr("Working time") + ": " + root.itemToCut.workingTime + "<br>" +
-                          qsTr("Panel size") + ": " + root.itemToCut.originalSize
+                          qsTr("Working time") + ": " + root.itemToCut.durationStr + "<br>" +
+                          qsTr("Panel size") + ": " + root.itemToCut.panelSize
             }
         }
     }

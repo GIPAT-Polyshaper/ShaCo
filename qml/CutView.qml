@@ -8,21 +8,37 @@ ColumnLayout {
     signal back
 
     property var itemToCut: null
+    property string remainingTimeStr: itemToCut === null ? qsTr("Unknown") : computeRemainingTime(controller.cutProgress)
 
-//    Image {
-//        Layout.fillWidth: true
-//        Layout.fillHeight: true
-//        Layout.margins: 3
-//        source: (itemToCut != null) ? itemToCut.image : ""
-//        fillMode: Image.PreserveAspectFit
-//        horizontalAlignment: Image.AlignHCenter
-//        verticalAlignment: Image.AlignVCenter
-//    }
+    function computeRemainingTime(progress)
+    {
+        if (progress > itemToCut.duration) {
+            return qsTr("Unknown")
+        } else {
+            var remainingSec = Math.floor(itemToCut.duration - progress)
+            var durationMin = Math.floor(remainingSec / 60)
+            var durationSec = remainingSec % 60
+
+            return durationMin + ":" + (durationSec < 10 ? "0" + durationSec : durationSec)
+        }
+    }
+
+    Image {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.margins: 3
+        source: (itemToCut !== null) ? itemToCut.image : ""
+        visible: itemToCut !== null
+        fillMode: Image.PreserveAspectFit
+        horizontalAlignment: Image.AlignHCenter
+        verticalAlignment: Image.AlignVCenter
+    }
 
     Text {
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.margins: 3
+        visible: itemToCut === null
         text: "<b>" + qsTr("Preview not available") + "</b>"
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
@@ -33,10 +49,11 @@ ColumnLayout {
         Layout.preferredHeight: 40
         Layout.fillWidth: true
         Layout.margins: 10
-        from: 0.0
-        to: 1.0
-        value: 1.0
-        indeterminate: controller.streamingGCode
+        from: 0
+        to: (itemToCut === null) ? 1 : itemToCut.duration
+        value: controller.streamingGCode ? controller.cutProgress : to
+        indeterminate: controller.streamingGCode &&
+                       (itemToCut === null || controller.cutProgress > itemToCut.duration)
 
         Text {
             id: remainingTime
@@ -45,7 +62,7 @@ ColumnLayout {
             z: 10
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
-            text: controller.streamingGCode ? qsTr("Remaining time: Unknown") : qsTr("Cut Completed")
+            text: controller.streamingGCode ? qsTr("Remaining time: ") + remainingTimeStr : qsTr("Cut Completed")
         }
     }
 

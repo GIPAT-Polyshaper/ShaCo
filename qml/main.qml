@@ -208,7 +208,11 @@ Window {
         onVisibleChanged:
             if (visible) {
                 root.statusText = qsTr("Preparing to cut")
-                cutPreparationView.itemToCut = mainView.selectedItem()
+                if (mainView.fileImported) {
+                    cutPreparationView.itemToCut = null
+                } else {
+                    cutPreparationView.itemToCut = mainView.selectedItem
+                }
             }
     }
 
@@ -222,7 +226,7 @@ Window {
                 root.statusText = Qt.binding(function() {
                     return controller.streamingGCode ? qsTr("Cutting...") : qsTr("Cut Completed")
                 })
-                cutView.itemToCut = mainView.selectedItem()
+                cutView.itemToCut = cutPreparationView.itemToCut
             }
     }
 

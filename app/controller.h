@@ -1,11 +1,15 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
+#include <QAbstractItemModel>
+#include <QDateTime>
 #include <QObject>
 #include <QThread>
+#include <QTimer>
 #include <QSerialPortInfo>
 #include <QUrl>
 #include "worker.h"
+#include "localshapesmodel.h"
 #include "core/localshapesfinder.h"
 
 class WorkerThread;
@@ -21,6 +25,8 @@ class Controller : public QObject
     Q_PROPERTY(float wireTemperature READ wireTemperature WRITE setWireTemperature NOTIFY wireTemperatureChanged)
     Q_PROPERTY(bool paused READ paused NOTIFY pausedChanged)
     Q_PROPERTY(bool senderCreated READ senderCreated NOTIFY senderCreatedChanged)
+    Q_PROPERTY(QAbstractItemModel* localShapesModel READ localShapesModel NOTIFY localShapesModelChanged)
+    Q_PROPERTY(qint64 cutProgress READ cutProgress NOTIFY cutProgressChanged)
 
 public:
     explicit Controller(QObject *parent = nullptr);
@@ -36,6 +42,8 @@ public:
     float wireTemperature() const;
     bool paused() const;
     bool senderCreated() const;
+    QAbstractItemModel* localShapesModel();
+    qint64 cutProgress() const;
 
 public slots:
     void sendLine(QByteArray line);
@@ -46,6 +54,7 @@ public slots:
     void stopStreaminGCode();
     void feedHold();
     void resumeFeedHold();
+    void changeLocalShapesSort(QString sortBy);
 
 signals:
     void startedPortDiscovery();
@@ -62,6 +71,8 @@ signals:
     void streamingEndedWithError(QString reason);
     void pausedChanged();
     void senderCreatedChanged();
+    void localShapesModelChanged(); // This is never emitted at the moment
+    void cutProgressChanged();
 
 private slots:
     void gcodeSenderCreated(GCodeSender* sender);
@@ -70,10 +81,12 @@ private slots:
     void signalPortClosed();
     void streamingStarted();
     void streamingEnded(GCodeSender::StreamEndReason reason, QString description);
+    void cutClockTimeout();
 
 private:
     void setPaused();
     void unsetPaused();
+    void initializeCutTimer();
 
     WorkerThread m_thread;
     bool m_connected;
@@ -82,6 +95,10 @@ private:
     bool m_paused;
     bool m_senderCreated;
     LocalShapesFinder m_shapesFinder;
+    LocalShapesModel m_shapesModel;
+    QTimer m_cutTimer;
+    QDateTime m_cutStartTime;
+    qint64 m_cutProgress;
 };
 
 #endif // CONTROLLER_H

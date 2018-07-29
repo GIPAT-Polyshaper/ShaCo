@@ -12,7 +12,14 @@ Controller::Controller(QObject *parent)
     , m_paused(false)
     , m_senderCreated(false)
     , m_shapesFinder(QDir::homePath() + "/PolyShaper")
+    , m_shapesModel(m_shapesFinder)
+    , m_cutProgress(0)
 {
+    connect(&m_shapesFinder, &LocalShapesFinder::shapesUpdated, &m_shapesModel, &LocalShapesModel::shapesUpdated);
+    connect(&m_cutTimer, &QTimer::timeout, this, &Controller::cutClockTimeout);
+    m_cutTimer.setInterval(1000);
+    m_cutTimer.setSingleShot(false);
+
     m_thread.start();
 }
 
@@ -118,6 +125,16 @@ bool Controller::senderCreated() const
     return m_senderCreated;
 }
 
+QAbstractItemModel* Controller::localShapesModel()
+{
+    return &m_shapesModel;
+}
+
+qint64 Controller::cutProgress() const
+{
+    return m_cutProgress;
+}
+
 void Controller::sendLine(QByteArray line)
 {
     auto p = m_thread.worker()->machineCommunicator();
@@ -205,6 +222,21 @@ void Controller::resumeFeedHold()
     unsetPaused();
 }
 
+void Controller::changeLocalShapesSort(QString sortBy)
+{
+    LocalShapesModel::SortCriterion s = LocalShapesModel::SortCriterion::Newest;
+
+    if (sortBy == "newest") {
+        s = LocalShapesModel::SortCriterion::Newest;
+    } else if (sortBy == "a-z") {
+        s = LocalShapesModel::SortCriterion::AZ;
+    } else if (sortBy == "z-a") {
+        s = LocalShapesModel::SortCriterion::ZA;
+    }
+
+    m_shapesModel.sortShapes(s);
+}
+
 void Controller::gcodeSenderCreated(GCodeSender* sender)
 {
     connect(sender, &GCodeSender::streamingStarted, this, &Controller::streamingStarted);
@@ -244,6 +276,8 @@ void Controller::streamingStarted()
     m_streamingGCode = true;
 
     emit streamingGCodeChanged();
+
+    initializeCutTimer();
 }
 
 void Controller::streamingEnded(GCodeSender::StreamEndReason reason, QString description)
@@ -264,6 +298,14 @@ void Controller::streamingEnded(GCodeSender::StreamEndReason reason, QString des
 
     m_senderCreated = false;
     emit senderCreatedChanged();
+
+    m_cutTimer.stop();
+}
+
+void Controller::cutClockTimeout()
+{
+    m_cutProgress = m_cutStartTime.secsTo(QDateTime::currentDateTime());
+    emit cutProgressChanged();
 }
 
 void Controller::setPaused()
@@ -284,4 +326,12 @@ void Controller::unsetPaused()
 
     m_paused = false;
     emit pausedChanged();
+}
+
+void Controller::initializeCutTimer()
+{
+    m_cutStartTime = QDateTime::currentDateTime();
+    m_cutTimer.start();
+    m_cutProgress = 0;
+    emit cutProgressChanged();
 }
