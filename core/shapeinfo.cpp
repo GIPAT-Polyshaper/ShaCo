@@ -1,6 +1,7 @@
 #include "shapeinfo.h"
 #include <functional>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 
@@ -28,7 +29,7 @@ ShapeInfo ShapeInfo::createFromFile(QString filename)
 {
     QFile file(filename);
 
-    if (!file.open(QIODevice::ReadOnly)) {
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         return ShapeInfo();
     }
 
@@ -45,9 +46,15 @@ ShapeInfo ShapeInfo::createFromFile(QString filename)
         return ShapeInfo();
     }
 
+    const auto fileInfo = QFileInfo(filename);
+    const auto path = fileInfo.canonicalPath();
+    const auto psjFilename = fileInfo.fileName();
+
     try {
         return ShapeInfo(
             version,
+            path,
+            psjFilename,
             extractField<QString>(obj, "name", &QJsonValue::isString, [](const QJsonValue& v){return v.toString();}),
             extractField<QString>(obj, "svgFilename", &QJsonValue::isString, [](const QJsonValue& v){return v.toString();}),
             extractField<bool>(obj, "square", &QJsonValue::isBool, [](const QJsonValue& v){return v.toBool();}),
@@ -113,13 +120,16 @@ ShapeInfo::ShapeInfo()
 {
 }
 
-ShapeInfo::ShapeInfo(unsigned int version, QString name, QString svgFilename, bool square,
-                     QString machineType, bool drawToolpath, double margin, QString generatedBy,
-                     QDateTime creationTime, double flatness, double workpieceDimX,
-                     double workpieceDimY, bool autoClosePath, unsigned int duration,
-                     bool pointsInsideWorkpiece, double speed, QString gcodeFilename)
+ShapeInfo::ShapeInfo(unsigned int version, QString path, QString psjFilename, QString name,
+                     QString svgFilename, bool square, QString machineType, bool drawToolpath,
+                     double margin, QString generatedBy, QDateTime creationTime, double flatness,
+                     double workpieceDimX, double workpieceDimY, bool autoClosePath,
+                     unsigned int duration, bool pointsInsideWorkpiece, double speed,
+                     QString gcodeFilename)
     : m_isValid(true)
     , m_version(version)
+    , m_path(path)
+    , m_psjFilename(psjFilename)
     , m_name(name)
     , m_svgFilename(svgFilename)
     , m_square(square)

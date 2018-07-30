@@ -30,7 +30,7 @@ private Q_SLOTS:
     void skipPsjFilesWithoutACorrespondingGCodeFile();
     void skipPsjFilesWithoutACorrespondingSvgFile();
     void emitSignalWhenShapesAreFirstFound();
-    void onlyLoadNewFilesOnSubsequentCallsToRescanDirectory();
+    void onlyLoadNewFilesWhenDirectoryChanges();
     void emitSignalWhenNewShapesAreFound();
     void removeShapesThatNoLongerExist();
     void emitSignalWhenShapesAreRemoved();
@@ -53,8 +53,8 @@ void LocalShapesFinderTest::createFiles(unsigned int startIndex, unsigned int co
 void LocalShapesFinderTest::createFilesInPath(QString path, unsigned int startIndex, unsigned int count, QString ext, QByteArray creator)
 {
     for (auto i = startIndex; i < (startIndex + count); ++i) {
-        QByteArray gcodeFilename = (path + QString("/tmpTest-%1.gcode").arg(i)).toLatin1();
-        QByteArray svgFilename = (path + QString("/tmpTest-%1.svg").arg(i)).toLatin1();
+        QByteArray gcodeFilename = (QString("tmpTest-%1.gcode").arg(i)).toLatin1();
+        QByteArray svgFilename = (QString("tmpTest-%1.svg").arg(i)).toLatin1();
         QByteArray content = R"(
 {
   "version": 1,
@@ -82,12 +82,12 @@ void LocalShapesFinderTest::createFilesInPath(QString path, unsigned int startIn
         file.write(content);
 
         // Also create gcode and svg files
-        QFile gcodeFile(gcodeFilename);
+        QFile gcodeFile(path + "/" + gcodeFilename);
         if (!gcodeFile.open(QIODevice::WriteOnly)) {
             throw QString("CANNOT CREATE gcode TEMPORARY FILE!!!");
         }
 
-        QFile svgFile(svgFilename);
+        QFile svgFile(path + "/" + svgFilename);
         if (!svgFile.open(QIODevice::WriteOnly)) {
             throw QString("CANNOT CREATE svg TEMPORARY FILE!!!");
         }
@@ -177,12 +177,12 @@ void LocalShapesFinderTest::loadFilesFromDirectory()
     QCoreApplication::processEvents();
 
     QCOMPARE(finder.shapes().size(), 3);
-    QCOMPARE(finder.shapes()[m_dir->path() + "/tmpTest-0.psj"].svgFilename(), m_dir->path() + "/tmpTest-0.svg");
-    QCOMPARE(finder.shapes()[m_dir->path() + "/tmpTest-0.psj"].gcodeFilename(), m_dir->path() + "/tmpTest-0.gcode");
-    QCOMPARE(finder.shapes()[m_dir->path() + "/tmpTest-1.psj"].svgFilename(), m_dir->path() + "/tmpTest-1.svg");
-    QCOMPARE(finder.shapes()[m_dir->path() + "/tmpTest-1.psj"].gcodeFilename(), m_dir->path() + "/tmpTest-1.gcode");
-    QCOMPARE(finder.shapes()[m_dir->path() + "/tmpTest-2.psj"].svgFilename(), m_dir->path() + "/tmpTest-2.svg");
-    QCOMPARE(finder.shapes()[m_dir->path() + "/tmpTest-2.psj"].gcodeFilename(), m_dir->path() + "/tmpTest-2.gcode");
+    QCOMPARE(finder.shapes()[m_dir->path() + "/tmpTest-0.psj"].svgFilename(), "tmpTest-0.svg");
+    QCOMPARE(finder.shapes()[m_dir->path() + "/tmpTest-0.psj"].gcodeFilename(), "tmpTest-0.gcode");
+    QCOMPARE(finder.shapes()[m_dir->path() + "/tmpTest-1.psj"].svgFilename(), "tmpTest-1.svg");
+    QCOMPARE(finder.shapes()[m_dir->path() + "/tmpTest-1.psj"].gcodeFilename(), "tmpTest-1.gcode");
+    QCOMPARE(finder.shapes()[m_dir->path() + "/tmpTest-2.psj"].svgFilename(), "tmpTest-2.svg");
+    QCOMPARE(finder.shapes()[m_dir->path() + "/tmpTest-2.psj"].gcodeFilename(), "tmpTest-2.gcode");
 }
 
 void LocalShapesFinderTest::onlyLoadFilesWithPsjExtension()
@@ -275,7 +275,7 @@ void LocalShapesFinderTest::emitSignalWhenShapesAreFirstFound()
     QCOMPARE(newShapes, expectedNewShapes);
 }
 
-void LocalShapesFinderTest::onlyLoadNewFilesOnSubsequentCallsToRescanDirectory()
+void LocalShapesFinderTest::onlyLoadNewFilesWhenDirectoryChanges()
 {
     LocalShapesFinder finder(m_dir->path());
 

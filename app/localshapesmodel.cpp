@@ -27,7 +27,7 @@ QVariant LocalShapesModel::data(const QModelIndex &index, int role) const
 
     switch (role) {
         case name:                  return info.name();
-        case svgFilename:           return info.svgFilename();
+        case svgFilename:           return info.path() + "/" + info.svgFilename();
         case square:                return info.square();
         case machineType:           return info.machineType();
         case drawToolpath:          return info.drawToolpath();
@@ -41,7 +41,7 @@ QVariant LocalShapesModel::data(const QModelIndex &index, int role) const
         case duration:              return info.duration();
         case pointsInsideWorkpiece: return info.pointsInsideWorkpiece();
         case speed:                 return info.speed();
-        case gcodeFilename:         return info.gcodeFilename();
+        case gcodeFilename:         return info.path() + "/" + info.gcodeFilename();
         default:                    return QVariant();
     }
 }

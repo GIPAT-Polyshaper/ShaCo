@@ -72,5 +72,7 @@ bool LocalShapesFinder::dirRemoved(QDir& dir)
 
 bool LocalShapesFinder::validShape(ShapeInfo& info)
 {
-    return info.isValid() && QFile::exists(info.gcodeFilename()) && QFile::exists(info.svgFilename());
+    return info.isValid() &&
+           QFile::exists(info.path() + "/" + info.gcodeFilename()) &&
+           QFile::exists(info.path() + "/" + info.svgFilename());
 }

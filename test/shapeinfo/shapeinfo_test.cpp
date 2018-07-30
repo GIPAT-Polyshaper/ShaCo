@@ -1,6 +1,7 @@
 #include <memory>
 #include <QByteArray>
 #include <QDateTime>
+#include <QFileInfo>
 #include <QStringList>
 #include <QTemporaryFile>
 #include <QtTest>
@@ -26,6 +27,7 @@ private Q_SLOTS:
     void createInvalidShapeIfCreationDateFormatIsInvalid();
     void createInvalidShapeIfDurationIsNegative();
     void createInvalidShapeIfDurationIsNotInt();
+    void openJsonFileAsText();
 };
 
 ShapeInfoTest::ShapeInfoTest()
@@ -58,7 +60,7 @@ void ShapeInfoTest::createShapeFromFile()
 {
   "version": 1,
   "name": "sandman",
-  "svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg",
+  "svgFilename": "polyshaper-000.svg",
   "square": true,
   "machineType": "PolyShaperOranje",
   "drawToolpath": true,
@@ -72,7 +74,7 @@ void ShapeInfoTest::createShapeFromFile()
   "duration": 81,
   "pointsInsideWorkpiece": true,
   "speed": 1000.0,
-  "gcodeFilename": "/home/tommy/PolyShaper/polyshaper-000.gcode"
+  "gcodeFilename": "polyshaper-000.gcode"
 })";
     auto file = writeJsonToFile(content);
 
@@ -80,8 +82,10 @@ void ShapeInfoTest::createShapeFromFile()
 
     QVERIFY(info.isValid());
     QCOMPARE(info.version(), 1u);
+    QCOMPARE(info.path(), QFileInfo(file->fileName()).canonicalPath());
+    QCOMPARE(info.psjFilename(), QFileInfo(file->fileName()).fileName());
     QCOMPARE(info.name(), "sandman");
-    QCOMPARE(info.svgFilename(), "/home/tommy/PolyShaper/polyshaper-000.svg");
+    QCOMPARE(info.svgFilename(), "polyshaper-000.svg");
     QCOMPARE(info.square(), true);
     QCOMPARE(info.machineType(), "PolyShaperOranje");
     QCOMPARE(info.drawToolpath(), true);
@@ -95,7 +99,7 @@ void ShapeInfoTest::createShapeFromFile()
     QCOMPARE(info.duration(), 81u);
     QCOMPARE(info.pointsInsideWorkpiece(), true);
     QCOMPARE(info.speed(), 1000.0);
-    QCOMPARE(info.gcodeFilename(), "/home/tommy/PolyShaper/polyshaper-000.gcode");
+    QCOMPARE(info.gcodeFilename(), "polyshaper-000.gcode");
 }
 
 void ShapeInfoTest::createInvalidShapeIfFileHasInvalidFormat()
@@ -114,7 +118,7 @@ void ShapeInfoTest::createInvalidShapeIfVersionIsUnknown()
 {
   "version": 999999,
   "name": "sandman",
-  "svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg",
+  "svgFilename": "polyshaper-000.svg",
   "square": true,
   "machineType": "PolyShaperOranje",
   "drawToolpath": true,
@@ -128,7 +132,7 @@ void ShapeInfoTest::createInvalidShapeIfVersionIsUnknown()
   "duration": 81,
   "pointsInsideWorkpiece": true,
   "speed": 1000.0,
-  "gcodeFilename": "/home/tommy/PolyShaper/polyshaper-000.gcode"
+  "gcodeFilename": "polyshaper-000.gcode"
 })";
     auto file = writeJsonToFile(content);
 
@@ -141,7 +145,7 @@ void ShapeInfoTest::createInvalidShapeIfAnyFieldIsMissing()
 {
     QList<QByteArray> fields{
         R"("name": "sandman")",
-        R"("svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg")",
+        R"("svgFilename": "polyshaper-000.svg")",
         R"("square": true)",
         R"("machineType": "PolyShaperOranje")",
         R"("drawToolpath": true)",
@@ -155,7 +159,7 @@ void ShapeInfoTest::createInvalidShapeIfAnyFieldIsMissing()
         R"("duration": 81)",
         R"("pointsInsideWorkpiece": true)",
         R"("speed": 1000.0)",
-        R"("gcodeFilename": "/home/tommy/PolyShaper/polyshaper-000.gcode")"
+        R"("gcodeFilename": "polyshaper-000.gcode")"
     };
 
     // Skipping one row at a time
@@ -178,7 +182,7 @@ void ShapeInfoTest::createInvalidShapeIfAnyFielsHasInvalidType()
 {
     QList<QByteArray> validFields{
         R"("name": "sandman")",
-        R"("svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg")",
+        R"("svgFilename": "polyshaper-000.svg")",
         R"("square": true)",
         R"("machineType": "PolyShaperOranje")",
         R"("drawToolpath": true)",
@@ -192,7 +196,7 @@ void ShapeInfoTest::createInvalidShapeIfAnyFielsHasInvalidType()
         R"("duration": 81)",
         R"("pointsInsideWorkpiece": true)",
         R"("speed": 1000.0)",
-        R"("gcodeFilename": "/home/tommy/PolyShaper/polyshaper-000.gcode")"
+        R"("gcodeFilename": "polyshaper-000.gcode")"
     };
 
     QList<QByteArray> invalidFields{
@@ -238,7 +242,7 @@ void ShapeInfoTest::createInvalidShapeIfCreationDateFormatIsInvalid()
 {
   "version": 1,
   "name": "sandman",
-  "svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg",
+  "svgFilename": "polyshaper-000.svg",
   "square": true,
   "machineType": "PolyShaperOranje",
   "drawToolpath": true,
@@ -252,7 +256,7 @@ void ShapeInfoTest::createInvalidShapeIfCreationDateFormatIsInvalid()
   "duration": 81,
   "pointsInsideWorkpiece": true,
   "speed": 1000.0,
-  "gcodeFilename": "/home/tommy/PolyShaper/polyshaper-000.gcode"
+  "gcodeFilename": "polyshaper-000.gcode"
 })";
     auto file = writeJsonToFile(content);
 
@@ -267,7 +271,7 @@ void ShapeInfoTest::createInvalidShapeIfDurationIsNegative()
 {
   "version": 1,
   "name": "sandman",
-  "svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg",
+  "svgFilename": "polyshaper-000.svg",
   "square": true,
   "machineType": "PolyShaperOranje",
   "drawToolpath": true,
@@ -281,7 +285,7 @@ void ShapeInfoTest::createInvalidShapeIfDurationIsNegative()
   "duration": -81,
   "pointsInsideWorkpiece": true,
   "speed": 1000.0,
-  "gcodeFilename": "/home/tommy/PolyShaper/polyshaper-000.gcode"
+  "gcodeFilename": "polyshaper-000.gcode"
 })";
     auto file = writeJsonToFile(content);
 
@@ -296,7 +300,7 @@ void ShapeInfoTest::createInvalidShapeIfDurationIsNotInt()
 {
   "version": 1,
   "name": "sandman",
-  "svgFilename": "/home/tommy/PolyShaper/polyshaper-000.svg",
+  "svgFilename": "polyshaper-000.svg",
   "square": true,
   "machineType": "PolyShaperOranje",
   "drawToolpath": true,
@@ -310,13 +314,105 @@ void ShapeInfoTest::createInvalidShapeIfDurationIsNotInt()
   "duration": 81.7,
   "pointsInsideWorkpiece": true,
   "speed": 1000.0,
-  "gcodeFilename": "/home/tommy/PolyShaper/polyshaper-000.gcode"
+  "gcodeFilename": "polyshaper-000.gcode"
 })";
     auto file = writeJsonToFile(content);
 
     auto info = ShapeInfo::createFromFile(file->fileName());
 
     QVERIFY(!info.isValid());
+}
+
+void ShapeInfoTest::openJsonFileAsText()
+{
+    // Here we test both \n and \r\n line terminators
+    QByteArray contentUnix = "\n\
+{\n\
+  \"version\": 1,\n\
+  \"name\": \"sandman\",\n\
+  \"svgFilename\": \"polyshaper-000.svg\",\n\
+  \"square\": true,\n\
+  \"machineType\": \"PolyShaperOranje\",\n\
+  \"drawToolpath\": true,\n\
+  \"margin\": 10.0,\n\
+  \"generatedBy\": \"2DPlugin\",\n\
+  \"creationTime\": \"2018-07-26T22:56:56.931242\",\n\
+  \"flatness\": 0.001,\n\
+  \"workpieceDimX\": 400.0,\n\
+  \"workpieceDimY\": 450.0,\n\
+  \"autoClosePath\": true,\n\
+  \"duration\": 81,\n\
+  \"pointsInsideWorkpiece\": true,\n\
+  \"speed\": 1000.0,\n\
+  \"gcodeFilename\": \"polyshaper-000.gcode\"\n\
+}";
+    QByteArray contentDos = "\r\n\
+{\r\n\
+  \"version\": 1,\r\n\
+  \"name\": \"sandman\",\r\n\
+  \"svgFilename\": \"polyshaper-000.svg\",\r\n\
+  \"square\": true,\r\n\
+  \"machineType\": \"PolyShaperOranje\",\r\n\
+  \"drawToolpath\": true,\r\n\
+  \"margin\": 10.0,\r\n\
+  \"generatedBy\": \"2DPlugin\",\r\n\
+  \"creationTime\": \"2018-07-26T22:56:56.931242\",\r\n\
+  \"flatness\": 0.001,\r\n\
+  \"workpieceDimX\": 400.0,\r\n\
+  \"workpieceDimY\": 450.0,\r\n\
+  \"autoClosePath\": true,\r\n\
+  \"duration\": 81,\r\n\
+  \"pointsInsideWorkpiece\": true,\r\n\
+  \"speed\": 1000.0,\r\n\
+  \"gcodeFilename\": \"polyshaper-000.gcode\"\r\n\
+}";
+
+    auto fileUnix = writeJsonToFile(contentUnix);
+    auto fileDos = writeJsonToFile(contentDos);
+
+    auto infoUnix = ShapeInfo::createFromFile(fileUnix->fileName());
+    QVERIFY(infoUnix.isValid());
+    QCOMPARE(infoUnix.version(), 1u);
+    QCOMPARE(infoUnix.path(), QFileInfo(fileUnix->fileName()).canonicalPath());
+    QCOMPARE(infoUnix.psjFilename(), QFileInfo(fileUnix->fileName()).fileName());
+    QCOMPARE(infoUnix.name(), "sandman");
+    QCOMPARE(infoUnix.svgFilename(), "polyshaper-000.svg");
+    QCOMPARE(infoUnix.square(), true);
+    QCOMPARE(infoUnix.machineType(), "PolyShaperOranje");
+    QCOMPARE(infoUnix.drawToolpath(), true);
+    QCOMPARE(infoUnix.margin(), 10.0);
+    QCOMPARE(infoUnix.generatedBy(), "2DPlugin");
+    QCOMPARE(infoUnix.creationTime(), QDateTime::fromString("2018-07-26T22:56:56.931242", Qt::ISODateWithMs));
+    QCOMPARE(infoUnix.flatness(), 0.001);
+    QCOMPARE(infoUnix.workpieceDimX(), 400.0);
+    QCOMPARE(infoUnix.workpieceDimY(), 450.0);
+    QCOMPARE(infoUnix.autoClosePath(), true);
+    QCOMPARE(infoUnix.duration(), 81u);
+    QCOMPARE(infoUnix.pointsInsideWorkpiece(), true);
+    QCOMPARE(infoUnix.speed(), 1000.0);
+    QCOMPARE(infoUnix.gcodeFilename(), "polyshaper-000.gcode");
+
+    auto infoDos = ShapeInfo::createFromFile(fileDos->fileName());
+    QVERIFY(infoDos.isValid());
+    QCOMPARE(infoDos.version(), 1u);
+    QCOMPARE(infoDos.path(), QFileInfo(fileDos->fileName()).canonicalPath());
+    QCOMPARE(infoDos.psjFilename(), QFileInfo(fileDos->fileName()).fileName());
+    QCOMPARE(infoDos.name(), "sandman");
+    QCOMPARE(infoDos.svgFilename(), "polyshaper-000.svg");
+    QCOMPARE(infoDos.square(), true);
+    QCOMPARE(infoDos.machineType(), "PolyShaperOranje");
+    QCOMPARE(infoDos.drawToolpath(), true);
+    QCOMPARE(infoDos.margin(), 10.0);
+    QCOMPARE(infoDos.generatedBy(), "2DPlugin");
+    QCOMPARE(infoDos.creationTime(), QDateTime::fromString("2018-07-26T22:56:56.931242", Qt::ISODateWithMs));
+    QCOMPARE(infoDos.flatness(), 0.001);
+    QCOMPARE(infoDos.workpieceDimX(), 400.0);
+    QCOMPARE(infoDos.workpieceDimY(), 450.0);
+    QCOMPARE(infoDos.autoClosePath(), true);
+    QCOMPARE(infoDos.duration(), 81u);
+    QCOMPARE(infoDos.pointsInsideWorkpiece(), true);
+    QCOMPARE(infoDos.speed(), 1000.0);
+    QCOMPARE(infoDos.gcodeFilename(), "polyshaper-000.gcode");
 }
 
 QTEST_GUILESS_MAIN(ShapeInfoTest)

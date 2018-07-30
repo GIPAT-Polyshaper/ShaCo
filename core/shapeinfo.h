@@ -13,10 +13,11 @@ public:
     ShapeInfo();
 
 private:
-    ShapeInfo(unsigned int version, QString name, QString svgFilename, bool square,
-              QString machineType, bool drawToolpath, double margin, QString generatedBy,
-              QDateTime creationTime, double flatness, double workpieceDimX, double workpieceDimY,
-              bool autoClosePath, unsigned int duration, bool pointsInsideWorkpiece, double speed,
+    ShapeInfo(unsigned int version, QString path, QString psjFilename, QString name,
+              QString svgFilename, bool square, QString machineType, bool drawToolpath,
+              double margin, QString generatedBy, QDateTime creationTime, double flatness,
+              double workpieceDimX, double workpieceDimY, bool autoClosePath,
+              unsigned int duration, bool pointsInsideWorkpiece, double speed,
               QString gcodeFilename);
 
 public:
@@ -28,6 +29,16 @@ public:
     unsigned int version() const
     {
         return m_version;
+    }
+
+    QString path() const // The canonical file path containing the loaded file
+    {
+        return m_path;
+    }
+
+    QString psjFilename() const
+    {
+        return m_psjFilename;
     }
 
     QString name() const
@@ -113,6 +124,8 @@ public:
 private:
     bool m_isValid;
     unsigned int m_version;
+    QString m_path;
+    QString m_psjFilename;
     QString m_name;
     QString m_svgFilename;
     bool m_square;
