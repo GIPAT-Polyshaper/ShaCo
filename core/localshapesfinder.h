@@ -13,6 +13,7 @@ class LocalShapesFinder : public QObject
     Q_OBJECT
 
 public:
+    // path must be absolute!!!
     explicit LocalShapesFinder(QString path);
 
     const QMap<QString, ShapeInfo>& shapes() const;

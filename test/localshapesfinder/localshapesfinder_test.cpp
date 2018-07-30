@@ -16,6 +16,7 @@ public:
 private:
     std::unique_ptr<QTemporaryDir> m_dir;
     void createFiles(unsigned int startIndex, unsigned int count, QString ext = "psj", QByteArray creator = "2DPlugin");
+    void createFilesInPath(QString path, unsigned int startIndex, unsigned int count, QString ext = "psj", QByteArray creator = "2DPlugin");
 
 private Q_SLOTS:
     void init();
@@ -37,6 +38,7 @@ private Q_SLOTS:
     void doNotEmitSignalIfDirectoryRemovedAndThereIsNoShape();
     void loadFilesFromDirAtAstart();
     void doNotEmitSignalsIfThereIsNoChange();
+    void createDirectoryIfNotExistingAtStart();
 };
 
 LocalShapesFinderTest::LocalShapesFinderTest()
@@ -45,9 +47,14 @@ LocalShapesFinderTest::LocalShapesFinderTest()
 
 void LocalShapesFinderTest::createFiles(unsigned int startIndex, unsigned int count, QString ext, QByteArray creator)
 {
+    createFilesInPath(m_dir->path(), startIndex, count, ext, creator);
+}
+
+void LocalShapesFinderTest::createFilesInPath(QString path, unsigned int startIndex, unsigned int count, QString ext, QByteArray creator)
+{
     for (auto i = startIndex; i < (startIndex + count); ++i) {
-        QByteArray gcodeFilename = (m_dir->path() + QString("/tmpTest-%1.gcode").arg(i)).toLatin1();
-        QByteArray svgFilename = (m_dir->path() + QString("/tmpTest-%1.svg").arg(i)).toLatin1();
+        QByteArray gcodeFilename = (path + QString("/tmpTest-%1.gcode").arg(i)).toLatin1();
+        QByteArray svgFilename = (path + QString("/tmpTest-%1.svg").arg(i)).toLatin1();
         QByteArray content = R"(
 {
   "version": 1,
@@ -68,7 +75,7 @@ void LocalShapesFinderTest::createFiles(unsigned int startIndex, unsigned int co
   "speed": 1000.0,
   "gcodeFilename": ")" + gcodeFilename + R"("
 })";
-        QFile file(m_dir->path() + QString("/tmpTest-%1.%2").arg(i).arg(ext));
+        QFile file(path + QString("/tmpTest-%1.%2").arg(i).arg(ext));
         if (!file.open(QIODevice::WriteOnly)) {
             throw QString("CANNOT CREATE psj TEMPORARY FILE!!!");
         }
@@ -458,6 +465,42 @@ void LocalShapesFinderTest::doNotEmitSignalsIfThereIsNoChange()
 
     // There must be no notification
     QVERIFY(!spy.wait(500));
+}
+
+void LocalShapesFinderTest::createDirectoryIfNotExistingAtStart()
+{
+    // Save path and remove dir
+    const auto path = m_dir->path();
+    m_dir.reset();
+
+    LocalShapesFinder finder(path);
+
+    QSignalSpy spy(&finder, &LocalShapesFinder::shapesUpdated);
+
+    // Path is created
+    QDir dir(path);
+    QVERIFY(dir.exists());
+
+    // Discarding initial notifications
+    spy.wait(500);
+    const auto oldSignals = spy.count();
+
+    // Also check we get signals on directory change
+    createFilesInPath(path, 0, 1);
+
+    QVERIFY(spy.wait(500));
+
+    QSet<QString> expectedNewShapes{path + "/tmpTest-0.psj"};
+    // Collect all new shapes (on windows we might receive multiple signals)
+    QSet<QString> newShapes;
+    for (auto i = oldSignals; i < spy.count(); ++i) {
+        newShapes.unite(spy.at(i).at(0).value<QSet<QString>>());
+        QVERIFY(spy.at(i).at(1).value<QSet<QString>>().isEmpty());
+    }
+    QCOMPARE(newShapes, expectedNewShapes);
+
+    // Remove everything
+    dir.removeRecursively();
 }
 
 QTEST_GUILESS_MAIN(LocalShapesFinderTest)

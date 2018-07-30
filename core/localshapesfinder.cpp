@@ -1,9 +1,15 @@
 #include "localshapesfinder.h"
+#include <QDir>
 #include <QFile>
 
 LocalShapesFinder::LocalShapesFinder(QString path)
-    : m_watcher(QStringList{path})
 {
+    // Creating directory if it doesn't exist
+    QDir::root().mkpath(path);
+
+    // Adding now to make sure it has been created
+    m_watcher.addPath(path);
+
     connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, &LocalShapesFinder::rescanDirectory);
 
     // Load initial dir content
