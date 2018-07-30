@@ -208,6 +208,7 @@ void Controller::feedHold()
     QMetaObject::invokeMethod(p, [p](){ p->feedHold(); });
 
     setPaused();
+    pauseCutTimer();
 }
 
 void Controller::resumeFeedHold()
@@ -220,6 +221,7 @@ void Controller::resumeFeedHold()
     QMetaObject::invokeMethod(p, [p](){ p->resumeFeedHold(); });
 
     unsetPaused();
+    resumeCutTimer();
 }
 
 void Controller::changeLocalShapesSort(QString sortBy)
@@ -334,4 +336,17 @@ void Controller::initializeCutTimer()
     m_cutTimer.start();
     m_cutProgress = 0;
     emit cutProgressChanged();
+}
+
+void Controller::pauseCutTimer()
+{
+    m_cutPauseStart = QDateTime::currentDateTime();
+    m_cutTimer.stop();
+}
+
+void Controller::resumeCutTimer()
+{
+    auto pausedMillis = m_cutPauseStart.msecsTo(QDateTime::currentDateTime());
+    m_cutStartTime = m_cutStartTime.addMSecs(pausedMillis);
+    m_cutTimer.start();
 }

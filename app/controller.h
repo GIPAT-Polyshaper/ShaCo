@@ -87,6 +87,8 @@ private:
     void setPaused();
     void unsetPaused();
     void initializeCutTimer();
+    void pauseCutTimer();
+    void resumeCutTimer();
 
     WorkerThread m_thread;
     bool m_connected;
@@ -98,6 +100,7 @@ private:
     LocalShapesModel m_shapesModel;
     QTimer m_cutTimer;
     QDateTime m_cutStartTime;
+    QDateTime m_cutPauseStart;
     qint64 m_cutProgress;
 };
 
