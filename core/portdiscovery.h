@@ -56,6 +56,7 @@ public:
         , m_portPollInterval(portPollInterval)
         , m_maxReadAttemptsPerPort(maxReadAttemptsPerPort)
         , m_currentPortAttempt(0)
+        , m_searchingPort(false)
     {
         m_timer.setSingleShot(true);
         connect(&m_timer, &QTimer::timeout, this, &PortDiscovery::timeout);
@@ -93,6 +94,8 @@ private:
 
     void searchPort()
     {
+        SearchingPortRAII searchingPortRAII(m_searchingPort);
+
         rescanIfNeeded();
 
         bool candidateFound = false;
@@ -102,10 +105,14 @@ private:
             if (vendorAndProductMatch(p)) {
                 qDebug() << "Found a port with matching vendor and product identifier";
                 initializePort(p);
-                askFirmwareVersion();
 
-                candidateFound = true;
-                break;
+                // m_serialPort might be reset in case of errors
+                if (m_serialPort) {
+                    askFirmwareVersion();
+
+                    candidateFound = true;
+                    break;
+                }
             }
         }
 
@@ -121,9 +128,14 @@ private:
                 this, &PortDiscovery<SerialPortInfo>::dataAvailable);
         connect(m_serialPort.get(), &SerialPortInterface::errorOccurred,
                 this, &PortDiscovery<SerialPortInfo>::serialPortError);
+
         m_serialPort->open();
-        // This is necessary in case the machine is in error
-        m_serialPort->write(QByteArray(1, ImmediateCommands::hardReset));
+
+        // m_serialPort might be reset in case of errors
+        if (m_serialPort) {
+            // This is necessary in case the machine is in error
+            m_serialPort->write(QByteArray(1, ImmediateCommands::hardReset));
+        }
     }
 
     void rescanIfNeeded()
@@ -152,10 +164,12 @@ private:
         m_currentPortAttempt = 0;
         m_receivedData.clear();
 
-        if (m_portsQueue.isEmpty()) {
-            m_timer.start(m_scanDelayMillis);
-        } else {
-            searchPort();
+        if (!m_searchingPort) {
+            if (m_portsQueue.isEmpty()) {
+                m_timer.start(m_scanDelayMillis);
+            } else {
+                searchPort();
+            }
         }
     }
 
@@ -186,6 +200,23 @@ private:
     QByteArray m_receivedData;
     int m_currentPortAttempt;
     QList<SerialPortInfo> m_portsQueue;
+    bool m_searchingPort;
+
+    // Sets searchingPort to true in costructor and to false in destructor
+    class SearchingPortRAII {
+    public:
+        SearchingPortRAII(bool &searchingPort)
+            : m_searchingPort(searchingPort)
+        {
+            m_searchingPort = true;
+        }
+        ~SearchingPortRAII()
+        {
+            m_searchingPort = false;
+        }
+    private:
+        bool& m_searchingPort;
+    };
 };
 
 #endif // PORTDISCOVERY_H

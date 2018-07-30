@@ -37,15 +37,20 @@ class TestSerialPort : public SerialPortInterface {
     Q_OBJECT
 
 public:
-    TestSerialPort()
+    TestSerialPort(bool errorOnOpen = false)
+        : m_errorOnOpen(errorOnOpen)
     {
     }
 
     bool open() override
     {
-        emit portOpened();
+        if (m_errorOnOpen) {
+            emitErrorSignal();
+        } else {
+            emit portOpened();
+        }
 
-        return true;
+        return !m_errorOnOpen;
     }
 
     qint64 write(const QByteArray &data) override
@@ -88,6 +93,7 @@ signals:
 
 private:
     QByteArray m_readData;
+    const bool m_errorOnOpen;
 };
 
 class PortDiscoveryTest : public QObject
@@ -116,6 +122,8 @@ private Q_SLOTS:
     void discardAccumulatedDataWhenOpeningANewPort();
     void whenObtainPortIsCalledReturnPortAndDisconnectFromSignals();
     void deletePortAndContinueIfErrorSignalIsReceived();
+    void ignorePortIfThereIsAnErrorWhenOpened();
+    void doNotAskFirmwareVersionAgainIfPortFoundAfterAFailureAtOpening();
 };
 
 PortDiscoveryTest::PortDiscoveryTest()
@@ -550,6 +558,68 @@ void PortDiscoveryTest::deletePortAndContinueIfErrorSignalIsReceived()
     QCOMPARE(dataWrittenSpy2.at(0).at(0).toByteArray(), "\xC0");
     QCOMPARE(dataWrittenSpy2.at(1).at(0).toByteArray(), "$I\n");
 
+    QVERIFY(dataWrittenSpy2.wait(250));
+    QCOMPARE(dataWrittenSpy2.at(2).at(0).toByteArray(), "$I\n");
+}
+
+void PortDiscoveryTest::ignorePortIfThereIsAnErrorWhenOpened()
+{
+    TestPortInfo portInfo(0x2341, 0x0043);
+    auto portListingFunction = [&portInfo]() { return QList<TestPortInfo>{portInfo}; };
+    auto serialPort1 = new TestSerialPort(true);
+    auto serialPort2 = new TestSerialPort(true);
+    auto first = true;
+    auto serialPortFactory = [serialPort1, serialPort2, &first](TestPortInfo) {
+        if (first) {
+            first = false;
+            return std::unique_ptr<SerialPortInterface>(serialPort1);
+        } else {
+            return std::unique_ptr<SerialPortInterface>(serialPort2);
+        }
+    };
+
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3);
+
+    // This should simply not crash
+    portDiscoverer.start();
+
+    // Another round
+    QThread::msleep(200);
+    QCoreApplication::processEvents();
+}
+
+void PortDiscoveryTest::doNotAskFirmwareVersionAgainIfPortFoundAfterAFailureAtOpening()
+{
+    // This basically tests that there are no nested calls to searchPort()
+    TestPortInfo portInfo(0x2341, 0x0043);
+    auto portListingFunction = [&portInfo]() {
+        return QList<TestPortInfo>{portInfo, portInfo};
+    };
+    auto serialPort1 = new TestSerialPort(true);
+    auto serialPort2 = new TestSerialPort();
+    bool first = true;
+    auto serialPortFactory = [serialPort1, serialPort2, &first](TestPortInfo) {
+        if (first) {
+            first = false;
+            return std::unique_ptr<SerialPortInterface>(serialPort1);
+        } else {
+            return std::unique_ptr<SerialPortInterface>(serialPort2);
+        }
+    };
+
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3);
+
+    QSignalSpy dataWrittenSpy2(serialPort2, &TestSerialPort::dataWritten);
+
+    portDiscoverer.start();
+
+    // Now it should move to the following port immediately, then continue via polling. The bug was
+    // that we received a double reset and request
+    QCOMPARE(dataWrittenSpy2.count(), 2);
+    QCOMPARE(dataWrittenSpy2.at(0).at(0).toByteArray(), "\xC0");
+    QCOMPARE(dataWrittenSpy2.at(1).at(0).toByteArray(), "$I\n");
+
+    // Polling again
     QVERIFY(dataWrittenSpy2.wait(250));
     QCOMPARE(dataWrittenSpy2.at(2).at(0).toByteArray(), "$I\n");
 }
