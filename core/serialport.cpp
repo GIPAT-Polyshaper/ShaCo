@@ -2,10 +2,6 @@
 #include <QtDebug>
 #include <QThread>
 
-namespace {
-    const unsigned long charSendDelayUs = 250;
-}
-
 SerialPortInterface::SerialPortInterface()
     : QObject()
 {
@@ -14,6 +10,7 @@ SerialPortInterface::SerialPortInterface()
 SerialPort::SerialPort(const QSerialPortInfo& portInfo)
     : SerialPortInterface()
     , m_serialPort(portInfo)
+    , m_characterSendDelayUs(0)
 {
     connect(&m_serialPort, &QSerialPort::readyRead, this, &SerialPort::dataAvailable);
     connect(&m_serialPort, &QSerialPort::errorOccurred, this, &SerialPort::signalErrorOccurred);
@@ -48,7 +45,9 @@ qint64 SerialPort::write(const QByteArray& data)
             ++retval;
         }
 
-        QThread::usleep(charSendDelayUs);
+        if (m_characterSendDelayUs != 0) {
+            QThread::usleep(m_characterSendDelayUs);
+        }
     }
 
     return retval;
@@ -67,6 +66,16 @@ QString SerialPort::errorString() const
 void SerialPort::close()
 {
     m_serialPort.close();
+}
+
+void SerialPort::setCharacterSendDelayUs(unsigned long us)
+{
+    m_characterSendDelayUs = us;
+}
+
+unsigned long SerialPort::characterSendDelayUs() const
+{
+    return m_characterSendDelayUs;
 }
 
 void SerialPort::signalErrorOccurred(QSerialPort::SerialPortError error)

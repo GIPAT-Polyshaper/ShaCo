@@ -251,7 +251,7 @@ void MachineStatusMonitorTest::closePortIfNoMessageIsReceivedWithinWatchdogDelay
     QTime chrono;
     chrono.start();
     QVERIFY(spy.wait(1250));
-    QVERIFY(chrono.elapsed() > 950);
+    QVERIFY(chrono.elapsed() > 900);
 }
 
 QTEST_GUILESS_MAIN(MachineStatusMonitorTest)

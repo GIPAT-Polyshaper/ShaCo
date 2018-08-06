@@ -27,6 +27,7 @@ class Controller : public QObject
     Q_PROPERTY(bool senderCreated READ senderCreated NOTIFY senderCreatedChanged)
     Q_PROPERTY(QAbstractItemModel* localShapesModel READ localShapesModel NOTIFY localShapesModelChanged)
     Q_PROPERTY(qint64 cutProgress READ cutProgress NOTIFY cutProgressChanged)
+    Q_PROPERTY(unsigned long characterSendDelayUs READ characterSendDelayUs WRITE setCharacterSendDelayUs NOTIFY characterSendDelayUsChanged)
 
 public:
     explicit Controller(QObject *parent = nullptr);
@@ -44,6 +45,7 @@ public:
     bool senderCreated() const;
     QAbstractItemModel* localShapesModel();
     qint64 cutProgress() const;
+    unsigned long characterSendDelayUs() const;
 
 public slots:
     void sendLine(QByteArray line);
@@ -56,6 +58,7 @@ public slots:
     void resumeFeedHold();
     void changeLocalShapesSort(QString sortBy);
     void reloadShapes();
+    void setCharacterSendDelayUs(unsigned long us);
 
 signals:
     void startedPortDiscovery();
@@ -74,6 +77,7 @@ signals:
     void senderCreatedChanged();
     void localShapesModelChanged(); // This is never emitted at the moment
     void cutProgressChanged();
+    void characterSendDelayUsChanged();
 
 private slots:
     void gcodeSenderCreated(GCodeSender* sender);
@@ -91,6 +95,7 @@ private:
     void pauseCutTimer();
     void resumeCutTimer();
 
+    Settings m_settings;
     WorkerThread m_thread;
     bool m_connected;
     bool m_streamingGCode;

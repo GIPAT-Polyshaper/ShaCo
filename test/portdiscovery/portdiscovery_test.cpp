@@ -39,6 +39,7 @@ class TestSerialPort : public SerialPortInterface {
 public:
     TestSerialPort(bool errorOnOpen = false)
         : m_errorOnOpen(errorOnOpen)
+        , m_characterSendDelayUs(0)
     {
     }
 
@@ -75,6 +76,16 @@ public:
         throw QString("close should not be used in this test!!!");
     }
 
+    void setCharacterSendDelayUs(unsigned long us) override
+    {
+        m_characterSendDelayUs = us;
+    }
+
+    unsigned long characterSendDelayUs() const override
+    {
+        return m_characterSendDelayUs;
+    }
+
     void simulateReceivedData(QByteArray data)
     {
         m_readData = data;
@@ -94,6 +105,7 @@ signals:
 private:
     QByteArray m_readData;
     const bool m_errorOnOpen;
+    unsigned long m_characterSendDelayUs;
 };
 
 class PortDiscoveryTest : public QObject
@@ -124,6 +136,8 @@ private Q_SLOTS:
     void deletePortAndContinueIfErrorSignalIsReceived();
     void ignorePortIfThereIsAnErrorWhenOpened();
     void doNotAskFirmwareVersionAgainIfPortFoundAfterAFailureAtOpening();
+    void setInitialCharacterSendDelayOnPortOpen();
+    void setInitialCharacterSendDelayOnPortOpenWhenSetterIsUsed();
 };
 
 PortDiscoveryTest::PortDiscoveryTest()
@@ -136,7 +150,7 @@ void PortDiscoveryTest::emitAMessageWhenStartProbing()
     auto portListingFunction = [](){ return QList<TestPortInfo>(); };
     auto serialPortFactory = [](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(); };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10000, 1, 1);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10000, 1, 1, 0);
 
     QSignalSpy spy(&portDiscoverer, &AbstractPortDiscovery::startedDiscoveringPort);
 
@@ -160,7 +174,7 @@ void PortDiscoveryTest::continuouslyProbeForPortsAtRegularIntervals()
     };
     auto serialPortFactory = [](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(); };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 1, 1);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 1, 1, 0);
 
     QSignalSpy spy(this, &PortDiscoveryTest::portListingCalled);
 
@@ -187,7 +201,7 @@ void PortDiscoveryTest::openPortWhenTheExpectedVendorAndProductIdAreFound()
         return std::unique_ptr<SerialPortInterface>(serialPort);
     };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 3000, 1, 1);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 3000, 1, 1, 0);
 
     QSignalSpy creationSpy(this, &PortDiscoveryTest::serialPortCreated);
     QSignalSpy openSpy(serialPort, &TestSerialPort::portOpened);
@@ -208,7 +222,7 @@ void PortDiscoveryTest::resetAndAskFirmwareVersionAfterOpeningPort()
     auto portListingFunction = [&portInfo]() { return QList<TestPortInfo>{portInfo}; };
     auto serialPortFactory = [serialPort](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(serialPort); };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 3000, 1000, 5);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 3000, 1000, 5, 0);
 
     QSignalSpy spy(serialPort, &TestSerialPort::dataWritten);
 
@@ -226,7 +240,7 @@ void PortDiscoveryTest::askFirmwareVersionAgainIfNoAswerIsReceived()
     auto portListingFunction = [&portInfo]() { return QList<TestPortInfo>{portInfo}; };
     auto serialPortFactory = [serialPort](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(serialPort); };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 3000, 300, 5);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 3000, 300, 5, 0);
 
     QSignalSpy spy(serialPort, &TestSerialPort::dataWritten);
 
@@ -255,7 +269,7 @@ void PortDiscoveryTest::ifTheExpectedReplyIsReceivedEmitSignal()
     auto portListingFunction = [&portInfo]() { return QList<TestPortInfo>{portInfo}; };
     auto serialPortFactory = [serialPort](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(serialPort); };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 300, 5);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 300, 5, 0);
 
     QSignalSpy spy(&portDiscoverer, &PortDiscovery<TestPortInfo>::portFound);
 
@@ -279,7 +293,7 @@ void PortDiscoveryTest::stopPollingWhenAValidPortIsFound()
     auto portListingFunction = [&portInfo]() { return QList<TestPortInfo>{portInfo}; };
     auto serialPortFactory = [serialPort](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(serialPort); };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 300, 5);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 300, 5, 0);
 
     QSignalSpy spy(serialPort, &TestSerialPort::dataWritten);
 
@@ -300,7 +314,7 @@ void PortDiscoveryTest::continuePollingIfWrongAnswerIsReceived()
     auto portListingFunction = [&portInfo]() { return QList<TestPortInfo>{portInfo}; };
     auto serialPortFactory = [serialPort](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(serialPort); };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 300, 5);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 300, 5, 0);
 
     QSignalSpy spy(serialPort, &TestSerialPort::dataWritten);
 
@@ -321,7 +335,7 @@ void PortDiscoveryTest::accumulateDataReceivedFromMachine()
     auto portListingFunction = [&portInfo]() { return QList<TestPortInfo>{portInfo}; };
     auto serialPortFactory = [serialPort](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(serialPort); };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 300, 5);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 300, 5, 0);
 
     QSignalSpy spy(&portDiscoverer, &PortDiscovery<TestPortInfo>::portFound);
 
@@ -359,7 +373,7 @@ void PortDiscoveryTest::askAgainForPortListAfterFailingTheMaximumNumberOfAttempt
         }
     };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 500, 100, 3);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 500, 100, 3, 0);
 
     QSignalSpy portListingSpy(this, &PortDiscoveryTest::portListingCalled);
     QSignalSpy dataWrittenSpy1(serialPort1, &TestSerialPort::dataWritten);
@@ -409,7 +423,7 @@ void PortDiscoveryTest::continueWithNextPortAfterFailingTheMaximumNumberOfAttemp
         }
     };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3, 0);
 
     QSignalSpy portListingSpy(this, &PortDiscoveryTest::portListingCalled);
     QSignalSpy dataWrittenSpy1(serialPort1, &TestSerialPort::dataWritten);
@@ -463,7 +477,7 @@ void PortDiscoveryTest::discardAccumulatedDataWhenOpeningANewPort()
         }
     };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3, 0);
 
     QSignalSpy portFoundSpy(&portDiscoverer, &PortDiscovery<TestPortInfo>::portFound);
     QSignalSpy dataWrittenSpy1(serialPort1, &TestSerialPort::dataWritten);
@@ -505,7 +519,7 @@ void PortDiscoveryTest::whenObtainPortIsCalledReturnPortAndDisconnectFromSignals
     auto portListingFunction = [&portInfo]() { return QList<TestPortInfo>{portInfo}; };
     auto serialPortFactory = [serialPort](TestPortInfo) { return std::unique_ptr<SerialPortInterface>(serialPort); };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 300, 5);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 300, 300, 5, 0);
 
     QSignalSpy spy(&portDiscoverer, &PortDiscovery<TestPortInfo>::portFound);
 
@@ -540,7 +554,7 @@ void PortDiscoveryTest::deletePortAndContinueIfErrorSignalIsReceived()
         }
     };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3, 0);
 
     QSignalSpy dataWrittenSpy1(serialPort1, &TestSerialPort::dataWritten);
     QSignalSpy portDeletedSpy(serialPort1, &TestSerialPort::destroyed);
@@ -582,7 +596,7 @@ void PortDiscoveryTest::ignorePortIfThereIsAnErrorWhenOpened()
         }
     };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3, 0);
 
     // This should simply not crash
     portDiscoverer.start();
@@ -611,7 +625,7 @@ void PortDiscoveryTest::doNotAskFirmwareVersionAgainIfPortFoundAfterAFailureAtOp
         }
     };
 
-    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3);
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 10, 100, 3, 0);
 
     QSignalSpy dataWrittenSpy2(serialPort2, &TestSerialPort::dataWritten);
 
@@ -626,6 +640,37 @@ void PortDiscoveryTest::doNotAskFirmwareVersionAgainIfPortFoundAfterAFailureAtOp
     // Polling again
     QVERIFY(dataWrittenSpy2.wait(250));
     QCOMPARE(dataWrittenSpy2.at(2).at(0).toByteArray(), "$I\n");
+}
+
+void PortDiscoveryTest::setInitialCharacterSendDelayOnPortOpen()
+{
+    auto portListingFunction = []() { return QList<TestPortInfo>{TestPortInfo(0x2341, 0x0043)}; };
+    auto serialPort = new TestSerialPort();
+    auto serialPortFactory = [serialPort](TestPortInfo) {
+        return std::unique_ptr<SerialPortInterface>(serialPort);
+    };
+
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 3000, 1, 1, 1317);
+
+    portDiscoverer.start();
+
+    QCOMPARE(serialPort->characterSendDelayUs(), 1317ul);
+}
+
+void PortDiscoveryTest::setInitialCharacterSendDelayOnPortOpenWhenSetterIsUsed()
+{
+    auto portListingFunction = []() { return QList<TestPortInfo>{TestPortInfo(0x2341, 0x0043)}; };
+    auto serialPort = new TestSerialPort();
+    auto serialPortFactory = [serialPort](TestPortInfo) {
+        return std::unique_ptr<SerialPortInterface>(serialPort);
+    };
+
+    PortDiscovery<TestPortInfo> portDiscoverer(portListingFunction, serialPortFactory, 3000, 1, 1, 0);
+
+    portDiscoverer.setCharacterSendDelayUs(1317);
+    portDiscoverer.start();
+
+    QCOMPARE(serialPort->characterSendDelayUs(), 1317ul);
 }
 
 QTEST_GUILESS_MAIN(PortDiscoveryTest)

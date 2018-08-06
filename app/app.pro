@@ -13,11 +13,13 @@ win32:RC_ICONS = ../images/ShaCo.ico
 HEADERS += \
     controller.h \
     worker.h \
-    localshapesmodel.h
+    localshapesmodel.h \
+    settings.h
 SOURCES += main.cpp \
     controller.cpp \
     worker.cpp \
-    localshapesmodel.cpp
+    localshapesmodel.cpp \
+    settings.cpp
 
 unix:LIBS += -L../core -lcore
 win32:debug:LIBS += -L../core/debug -lcore

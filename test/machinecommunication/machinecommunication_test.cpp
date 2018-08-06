@@ -43,6 +43,8 @@ private Q_SLOTS:
     void keepDataAfterEndlineForNextMessage();
     void sendAllMessagesWhenMultipleAreReceivedWithTheSameCommand();
     void doNotEmitSignalWhenClosingPortIfPortIsClosed();
+    void setCharacterSendDelayUsInSerialPortWhenAskedTo();
+    void doNotSetCharacterSendDelayUsInSerialPortIfClosed();
 };
 
 MachineCommunicationTest::MachineCommunicationTest()
@@ -492,6 +494,28 @@ void MachineCommunicationTest::doNotEmitSignalWhenClosingPortIfPortIsClosed()
 
     communicator.closePortWithError("bla bla bla");
     QCOMPARE(errorSpy.count(), 0);
+}
+
+void MachineCommunicationTest::setCharacterSendDelayUsInSerialPortWhenAskedTo()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator(100);
+
+    communicator.portFound(m_info, &portDiscoverer);
+
+    communicator.setCharacterSendDelayUs(1317);
+
+    QCOMPARE(serialPort->characterSendDelayUs(), 1317ul);
+}
+
+void MachineCommunicationTest::doNotSetCharacterSendDelayUsInSerialPortIfClosed()
+{
+    MachineCommunication communicator(100);
+
+    // This should simply not crash
+    communicator.setCharacterSendDelayUs(1317);
 }
 
 QTEST_GUILESS_MAIN(MachineCommunicationTest)

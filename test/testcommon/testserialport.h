@@ -14,6 +14,8 @@ public:
     QByteArray readAll() override;
     QString errorString() const override;
     void close() override;
+    void setCharacterSendDelayUs(unsigned long us) override;
+    unsigned long characterSendDelayUs() const override;
     QByteArray writtenData() const;
     void simulateReceivedData(QByteArray data);
     void setInError(bool inError); // Use this to have write return -1 and readAll an empty array
@@ -27,6 +29,7 @@ private:
     bool m_inError;
     QByteArray m_writtenData;
     QByteArray m_readData;
+    unsigned long m_characterSendDelayUs;
 };
 
 #endif // TESTSERIALPORT_H
