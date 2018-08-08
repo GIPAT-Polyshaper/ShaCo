@@ -1,4 +1,5 @@
 #include <QGuiApplication>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
@@ -10,8 +11,11 @@ int main(int argc, char *argv[])
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
     QGuiApplication app(argc, argv);
+#ifdef Q_OS_MACOS
+    app.setWindowIcon(QIcon(":/images/ShaCo.icns"));
+#endif
 
-    // TODO: For the moment we use the dafault QT style "Fusion", perhaps create a custom style as needed
+    // TODO: For the moment we use the default QT style "Fusion", perhaps create a custom style as needed
     QQuickStyle::setStyle("Fusion");
 
     QQmlApplicationEngine engine;
