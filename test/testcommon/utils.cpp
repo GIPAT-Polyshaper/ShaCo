@@ -11,5 +11,5 @@ std::pair<std::unique_ptr<MachineCommunication>, TestSerialPort*> createCommunic
     auto communicator = std::make_unique<MachineCommunication>(hardResetDelay);
     communicator->portFound(MachineInfo("a", "1"), &portDiscoverer);
 
-    return std::move(std::make_pair(std::move(communicator), serialPort));
+    return std::make_pair(std::move(communicator), serialPort);
 }
