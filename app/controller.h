@@ -58,7 +58,7 @@ public slots:
 
 signals:
     void startedPortDiscovery();
-    void portFound(QString machineName, QString firmwareVersion);
+    void portFound(QString machineName, QString partNumber, QString serialNumber, QString firmwareVersion);
     void connectedChanged();
     void dataSent(QByteArray data);
     void dataReceived(QByteArray data);

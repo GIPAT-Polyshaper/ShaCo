@@ -253,7 +253,7 @@ void Controller::signalPortFound(MachineInfo info)
     m_connected = true;
     m_senderCreated = false;
 
-    emit portFound(info.machineName(), info.firmwareVersion());
+    emit portFound(info.machineName(), info.partNumber(), info.serialNumber(), info.firmwareVersion());
     emit connectedChanged();
 }
 

@@ -14,11 +14,21 @@ public:
 public:
     MachineInfo();
 
-    MachineInfo(QString machineName, QString firmwareVersion);
+    MachineInfo(QString machineName, QString partNumber, QString serialNumber, QString firmwareVersion);
 
     QString machineName() const
     {
         return m_machineName;
+    }
+
+    QString partNumber() const
+    {
+        return m_partNumber;
+    }
+
+    QString serialNumber() const
+    {
+        return m_serialNumber;
     }
 
     QString firmwareVersion() const
@@ -33,6 +43,8 @@ public:
 
 private:
     const QString m_machineName;
+    const QString m_partNumber;
+    const QString m_serialNumber;
     const QString m_firmwareVersion;
     const bool m_isValid;
 };

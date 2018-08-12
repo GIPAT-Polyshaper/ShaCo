@@ -12,8 +12,7 @@ Window {
     title: qsTr("ShaCo")
 
     property string statusText: ""
-    property string machineName: ""
-    property string firmwareVersion: ""
+    property string machineInfo: ""
 
     onClosing:
         if (controller.streamingGCode) {
@@ -25,13 +24,11 @@ Window {
         target: controller
         onStartedPortDiscovery: {
             logoAnimationTimer.running = true
-            root.machineName = ""
-            root.firmwareVersion = ""
+            root.machineInfo = ""
         }
         onPortFound: {
             logoAnimationTimer.stopAndResetImage()
-            root.machineName = machineName
-            root.firmwareVersion = firmwareVersion
+            root.machineInfo = machineName + " [" + partNumber + " " + serialNumber + " " + firmwareVersion + "]"
         }
         onPortClosedWithError:
             if (!errorDialog.visible) {
@@ -97,7 +94,7 @@ Window {
                     delay: 0
                     timeout: 3000
                     visible: false
-                    text: (root.machineName == "") ? qsTr("Searching machine...") : qsTr(root.machineName + " [" + root.firmwareVersion +"]")
+                    text: (root.machineInfo == "") ? qsTr("Searching machine...") : qsTr(root.machineInfo)
                 }
             }
 

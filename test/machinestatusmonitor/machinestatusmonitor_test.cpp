@@ -44,7 +44,7 @@ void MachineStatusMonitorTest::sendStatusReportQueryCommandWhenMachineIsInitiali
 
     QCOMPARE(spy.count(), 0);
 
-    communicator->portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
 
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.at(0).at(0).toByteArray(), "?");
@@ -62,7 +62,7 @@ void MachineStatusMonitorTest::periodicallySendStatusReportQueryCommand()
 
     QCOMPARE(spy.count(), 0);
 
-    communicator->portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
 
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.at(0).at(0).toByteArray(), "?");
@@ -237,7 +237,7 @@ void MachineStatusMonitorTest::closePortIfNoMessageIsReceivedWithinWatchdogDelay
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::portClosedWithError);
 
-    communicator->portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
 
     // Port not closed
     QVERIFY(!spy.wait(750));
