@@ -41,6 +41,8 @@ private Q_SLOTS:
     void loadFilesFromDirAtStart();
     void doNotEmitSignalsIfThereIsNoChange();
     void createDirectoryIfNotExistingAtStart();
+    void whenRescanIsCalledByHandReloadEverythingFromTheBeginning();
+    void whenRescanIsCalledByHandSignalThatAllShapesWereReloaded();
 };
 
 LocalShapesFinderTest::LocalShapesFinderTest()
@@ -508,6 +510,65 @@ void LocalShapesFinderTest::createDirectoryIfNotExistingAtStart()
 
     // Remove everything
     dir.removeRecursively();
+}
+
+void LocalShapesFinderTest::whenRescanIsCalledByHandReloadEverythingFromTheBeginning()
+{
+    // When a reload is triggered by QFileSystemWatcher we don't reload files that we already know
+    // (even if they might have changed). If a reload is forced, we reload everything from scratch
+
+    createFiles(0, 3, "psj", "UNO");
+
+    LocalShapesFinder finder(m_curPath);
+
+    QCOMPARE(finder.shapes().size(), 3);
+
+    QCOMPARE(finder.shapes()[m_curPath + "/tmpTest-0.psj"].generatedBy(), "UNO");
+    QCOMPARE(finder.shapes()[m_curPath + "/tmpTest-1.psj"].generatedBy(), "UNO");
+    QCOMPARE(finder.shapes()[m_curPath + "/tmpTest-2.psj"].generatedBy(), "UNO");
+
+    // Create again, they are not reloaded
+    createFiles(0, 3, "psj", "DUE");
+
+    QCOMPARE(finder.shapes()[m_curPath + "/tmpTest-0.psj"].generatedBy(), "UNO");
+    QCOMPARE(finder.shapes()[m_curPath + "/tmpTest-1.psj"].generatedBy(), "UNO");
+    QCOMPARE(finder.shapes()[m_curPath + "/tmpTest-2.psj"].generatedBy(), "UNO");
+
+    // Now force reload, everything is reloaded
+    finder.reload();
+
+    QCOMPARE(finder.shapes()[m_curPath + "/tmpTest-0.psj"].generatedBy(), "DUE");
+    QCOMPARE(finder.shapes()[m_curPath + "/tmpTest-1.psj"].generatedBy(), "DUE");
+    QCOMPARE(finder.shapes()[m_curPath + "/tmpTest-2.psj"].generatedBy(), "DUE");
+}
+
+void LocalShapesFinderTest::whenRescanIsCalledByHandSignalThatAllShapesWereReloaded()
+{
+    // When a reload is triggered by QFileSystemWatcher we don't reload files that we already know
+    // (even if they might have changed). If a reload is forced, we reload everything from scratch
+
+    createFiles(0, 3, "psj", "UNO");
+
+    LocalShapesFinder finder(m_curPath);
+
+    QSignalSpy spy(&finder, &LocalShapesFinder::shapesUpdated);
+
+    // Create again and force reload
+    createFiles(0, 3, "psj", "DUE");
+    finder.reload();
+
+    QCOMPARE(spy.count(), 1);
+    const auto& newShapes = spy.at(0).at(0).value<QSet<QString>>();
+    const auto& missingShapes = spy.at(0).at(1).value<QSet<QString>>();
+
+    const auto expectedSet = QSet<QString>{
+            m_curPath + "/tmpTest-0.psj",
+            m_curPath + "/tmpTest-1.psj",
+            m_curPath + "/tmpTest-2.psj"
+    };
+
+    QCOMPARE(newShapes, expectedSet);
+    QCOMPARE(missingShapes, expectedSet);
 }
 
 QTEST_GUILESS_MAIN(LocalShapesFinderTest)

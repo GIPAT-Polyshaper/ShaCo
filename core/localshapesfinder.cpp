@@ -3,17 +3,18 @@
 #include <QFile>
 
 LocalShapesFinder::LocalShapesFinder(QString path)
+    : m_path(path)
 {
     // Creating directory if it doesn't exist
-    QDir::root().mkpath(path);
+    QDir::root().mkpath(m_path);
 
     // Adding now to make sure it has been created
-    m_watcher.addPath(path);
+    m_watcher.addPath(m_path);
 
-    connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, &LocalShapesFinder::rescanDirectory);
+    connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, &LocalShapesFinder::directoryChanged);
 
     // Load initial dir content
-    rescanDirectory(path);
+    reload();
 }
 
 const QMap<QString, ShapeInfo>& LocalShapesFinder::shapes() const
@@ -21,19 +22,64 @@ const QMap<QString, ShapeInfo>& LocalShapesFinder::shapes() const
     return m_shapes;
 }
 
-void LocalShapesFinder::rescanDirectory(QString path)
+void LocalShapesFinder::reload()
 {
-    QDir dir(path);
+    QDir dir(m_path);
 
     if (dirRemoved(dir)) {
         return;
     }
 
-    QSet<QString> newShapes;
-    QSet<QString> missingShapes(m_shapes.keys().toSet());
-    for (const auto& info: dir.entryInfoList(QStringList() << "*.psj", QDir::Files)) {
-        const auto& shapeFile = info.canonicalFilePath();
+    const auto initialShapes = m_shapes.keys().toSet();
 
+    m_shapes.clear(); // This is needed so that loadNewShapes loads all shapes
+    m_shapes = loadNewShapes(listAllShapesInDir(dir));
+
+    if (!initialShapes.isEmpty() || !m_shapes.isEmpty()) {
+        emit shapesUpdated(m_shapes.keys().toSet(), initialShapes);
+    }
+}
+
+void LocalShapesFinder::directoryChanged()
+{
+    QDir dir(m_path);
+
+    if (dirRemoved(dir)) {
+        return;
+    }
+
+    const auto initialShapes = m_shapes.keys().toSet();
+    const auto currentShapes = listAllShapesInDir(dir);
+
+    const auto newShapes = loadNewShapes(currentShapes);
+    m_shapes.unite(newShapes);
+
+    const auto missingShapes = initialShapes - currentShapes;
+    for (const auto& toRemove: missingShapes) {
+        m_shapes.remove(toRemove);
+    }
+
+    if (!newShapes.isEmpty() || !missingShapes.isEmpty()) {
+        emit shapesUpdated(m_shapes.keys().toSet() - initialShapes, missingShapes);
+    }
+}
+
+QSet<QString> LocalShapesFinder::listAllShapesInDir(QDir dir) const
+{
+    QSet<QString> allShapes;
+
+    for (const auto& info: dir.entryInfoList(QStringList() << "*.psj", QDir::Files)) {
+        allShapes.insert(info.canonicalFilePath());
+    }
+
+    return allShapes;
+}
+
+QMap<QString, ShapeInfo> LocalShapesFinder::loadNewShapes(QSet<QString> currentShapes) const
+{
+    QMap<QString, ShapeInfo> newValidShapes;
+
+    for (const auto& shapeFile: currentShapes) {
         if (!m_shapes.contains(shapeFile)) {
             auto shapeInfo = ShapeInfo::createFromFile(shapeFile);
 
@@ -41,20 +87,11 @@ void LocalShapesFinder::rescanDirectory(QString path)
                 continue;
             }
 
-            newShapes.insert(shapeFile);
-            m_shapes[shapeFile] = shapeInfo;
+            newValidShapes[shapeFile] = shapeInfo;
         }
-
-        missingShapes.remove(shapeFile);
     }
 
-    for (auto toRemove: missingShapes) {
-        m_shapes.remove(toRemove);
-    }
-
-    if (!newShapes.isEmpty() || !missingShapes.isEmpty()) {
-        emit shapesUpdated(newShapes, missingShapes);
-    }
+    return newValidShapes;
 }
 
 bool LocalShapesFinder::dirRemoved(QDir& dir)
@@ -70,7 +107,7 @@ bool LocalShapesFinder::dirRemoved(QDir& dir)
     return false;
 }
 
-bool LocalShapesFinder::validShape(ShapeInfo& info)
+bool LocalShapesFinder::validShape(ShapeInfo& info) const
 {
     return info.isValid() &&
            QFile::exists(info.path() + "/" + info.gcodeFilename()) &&
