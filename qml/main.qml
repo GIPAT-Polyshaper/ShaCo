@@ -220,9 +220,15 @@ Window {
             if (visible) {
                 root.statusText = qsTr("Preparing to cut")
                 if (mainView.fileImported) {
-                    cutPreparationView.itemToCut = null
+                    cutPreparationView.itemToCut.imported = true
                 } else {
-                    cutPreparationView.itemToCut = mainView.selectedItem
+                    cutPreparationView.itemToCut.imported = false
+                    cutPreparationView.itemToCut.name = mainView.selectedItem.name
+                    cutPreparationView.itemToCut.image = mainView.selectedItem.image
+                    cutPreparationView.itemToCut.duration = mainView.selectedItem.duration
+                    cutPreparationView.itemToCut.description = mainView.selectedItem.description
+                    cutPreparationView.itemToCut.panelX = mainView.selectedItem.panelX
+                    cutPreparationView.itemToCut.panelY = mainView.selectedItem.panelY
                 }
             }
     }
@@ -237,7 +243,10 @@ Window {
                 root.statusText = Qt.binding(function() {
                     return controller.streamingGCode ? qsTr("Cutting...") : qsTr("Cut Completed")
                 })
-                cutView.itemToCut = cutPreparationView.itemToCut
+
+                cutView.itemToCut.imported = cutPreparationView.itemToCut.imported
+                cutView.itemToCut.image = cutPreparationView.itemToCut.image
+                cutView.itemToCut.duration = cutPreparationView.itemToCut.duration
             }
     }
 
