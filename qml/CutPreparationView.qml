@@ -9,7 +9,19 @@ ColumnLayout {
     signal back
     signal startCutRequested
 
-    property var itemToCut: null
+    property var itemToCut: theShape
+
+    QtObject {
+        id: theShape
+
+        property bool imported: true
+        property string name: ""
+        property string image: ""
+        property int duration: 0
+        property string description: ""
+        property double panelX: 0.0
+        property double panelY: 0.0
+    }
 
     Item {
         id: info
@@ -23,7 +35,7 @@ ColumnLayout {
             y: 0
             width: 200
             height: parent.height
-            source: root.itemToCut != null ? root.itemToCut.image : ""
+            source: theShape.imported ? "" : theShape.image
             fillMode: Image.PreserveAspectFit
             horizontalAlignment: Image.AlignHCenter
             verticalAlignment: Image.AlignVCenter
@@ -41,12 +53,12 @@ ColumnLayout {
                 width: info.width
                 horizontalAlignment: Text.AlignLeft
                 verticalAlignment: Text.AlignVCenter
-                text: (root.itemToCut == null) ?
+                text: theShape.imported ?
                           "<b>" + qsTr("Preview not available") + "</b>" :
-                          "<b>" + root.itemToCut.name + "</b><br>" +
-                          root.itemToCut.description + "<br>" +
-                          qsTr("Working time") + ": " + ShaCoUtils.secondsToMMSS(root.itemToCut.duration) + "<br>" +
-                          qsTr("Panel size") + ": " + ShaCoUtils.panelSize(root.itemToCut.panelX, root.itemToCut.panelY)
+                          "<b>" + theShape.name + "</b><br>" +
+                          theShape.description + "<br>" +
+                          qsTr("Working time") + ": " + ShaCoUtils.secondsToMMSS(theShape.duration) + "<br>" +
+                          qsTr("Panel size") + ": " + ShaCoUtils.panelSize(theShape.panelX, theShape.panelY)
             }
         }
     }

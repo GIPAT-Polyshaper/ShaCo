@@ -8,15 +8,23 @@ ColumnLayout {
 
     signal back
 
-    property var itemToCut: null
-    property string remainingTimeStr: itemToCut === null ? qsTr("Unknown") : computeRemainingTime(controller.cutProgress)
+    property var itemToCut: theShape
+    property string remainingTimeStr: theShape.imported ? qsTr("Unknown") : computeRemainingTime(controller.cutProgress)
+
+    QtObject {
+        id: theShape
+
+        property bool imported: true
+        property string image: ""
+        property int duration: 0
+    }
 
     function computeRemainingTime(progress)
     {
-        if (progress > itemToCut.duration) {
+        if (progress > theShape.duration) {
             return qsTr("Unknown")
         } else {
-            return ShaCoUtils.secondsToMMSS(itemToCut.duration - progress)
+            return ShaCoUtils.secondsToMMSS(theShape.duration - progress)
         }
     }
 
@@ -24,8 +32,8 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.margins: 3
-        source: (itemToCut !== null) ? itemToCut.image : ""
-        visible: itemToCut !== null
+        source: theShape.imported ? "" : theShape.image
+        visible: !theShape.imported
         fillMode: Image.PreserveAspectFit
         horizontalAlignment: Image.AlignHCenter
         verticalAlignment: Image.AlignVCenter
@@ -35,7 +43,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.margins: 3
-        visible: itemToCut === null
+        visible: theShape.imported
         text: "<b>" + qsTr("Preview not available") + "</b>"
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
@@ -47,10 +55,10 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.margins: 10
         from: 0
-        to: (itemToCut === null) ? 1 : itemToCut.duration
+        to: theShape.imported ? 1 : theShape.duration
         value: controller.streamingGCode ? controller.cutProgress : to
         indeterminate: controller.streamingGCode &&
-                       (itemToCut === null || controller.cutProgress > itemToCut.duration)
+                       (theShape.imported || controller.cutProgress > theShape.duration)
 
         Text {
             id: remainingTime

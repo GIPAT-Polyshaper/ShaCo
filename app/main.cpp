@@ -13,8 +13,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 #ifdef Q_OS_MACOS
     app.setWindowIcon(QIcon(":/images/ShaCo.icns"));
-#endif
-#ifdef Q_OS_WIN
+#else
     app.setWindowIcon(QIcon(":/images/ShaCo.ico"));
 #endif
 
