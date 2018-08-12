@@ -506,7 +506,7 @@ void CommandSenderTest::resetSentMessagesWhenPortClosed()
     communicator->closePort();
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
-    communicator->portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
 
     // New commands should be sent immediately and old one discarded
     sender.sendCommand("abc\n");
@@ -535,7 +535,7 @@ void CommandSenderTest::resetToSendMessagesWhenPortClosed()
     communicator->closePort();
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
-    communicator->portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
 
     // Send new commands and up to 128 bytes and then one more
     for (auto i = 0; i < 16; ++i) {
@@ -563,7 +563,7 @@ void CommandSenderTest::callReplyLostOfListenersWhenPortClosed()
     }
 
     // Sending 16 time 8 bytes = 128 bytes, then some more bytes
-    for (auto i = 0; i < 16; ++i) {
+    for (auto i = 0u; i < 16u; ++i) {
         sender.sendCommand("0123456\n", i, listeners[i].get());
     }
     sender.sendCommand("more\n", 16, listeners[16].get());
@@ -592,10 +592,10 @@ void CommandSenderTest::doNotCallReplyLostOfNullAndDeletedListenersWhenPortClose
     }
 
     // Setting some listeners to null, non-null ones are deleted below
-    for (auto i = 0; i < 8; ++i) {
+    for (auto i = 0u; i < 8u; ++i) {
         sender.sendCommand("0123456\n", i, listeners[i].get());
     }
-    for (auto i = 8; i < 16; ++i) {
+    for (auto i = 8u; i < 16u; ++i) {
         sender.sendCommand("0123456\n");
     }
     sender.sendCommand("more\n", 16, listeners[16].get());
@@ -628,7 +628,7 @@ void CommandSenderTest::resetStateWhenPortClosedWithError()
     }
 
     // Sending 16 time 8 bytes = 128 bytes, then some more bytes
-    for (auto i = 0; i < 16; ++i) {
+    for (auto i = 0u; i < 16u; ++i) {
         sender.sendCommand("0123456\n", i, listeners[i].get());
     }
     sender.sendCommand("more\n", 16, listeners[16].get());
@@ -636,7 +636,7 @@ void CommandSenderTest::resetStateWhenPortClosedWithError()
     sender.sendCommand("again\n", 18, listeners[18].get());
 
     // remove some listeners
-    for (auto i = 0; i < 19; ++i) {
+    for (auto i = 0u; i < 19u; ++i) {
         if (i % 3 == 1) {
             listeners[i].reset();
         }
@@ -649,7 +649,7 @@ void CommandSenderTest::resetStateWhenPortClosedWithError()
     communicator->closePortWithError("bla");
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
-    communicator->portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
 
     // Send new commands and up to 128 bytes and then one more
     for (auto i = 0; i < 16; ++i) {
@@ -700,7 +700,7 @@ void CommandSenderTest::resetStateWhenMachineInitialized()
     }
 
     // Sending 16 time 8 bytes = 128 bytes, then some more bytes
-    for (auto i = 0; i < 16; ++i) {
+    for (auto i = 0u; i < 16u; ++i) {
         sender.sendCommand("0123456\n", i, listeners[i].get());
     }
     sender.sendCommand("more\n", 16, listeners[16].get());
@@ -708,7 +708,7 @@ void CommandSenderTest::resetStateWhenMachineInitialized()
     sender.sendCommand("again\n", 18, listeners[18].get());
 
     // remove some listeners
-    for (auto i = 0; i < 19; ++i) {
+    for (auto i = 0u; i < 19u; ++i) {
         if (i % 3 == 1) {
             listeners[i].reset();
         }
@@ -756,7 +756,7 @@ void CommandSenderTest::neverSendNewCommandsIfTheareAreEnqueuedOnes()
 
     // Sending 15 time 8 bytes = 120 bytes, then a command longer than 8 bytes (that is not sent)
     // and then another short command that must not be sent
-    for (auto i = 0; i < 15; ++i) {
+    for (auto i = 0u; i < 15u; ++i) {
         sender.sendCommand("0123456\n");
     }
     QVERIFY(sender.sendCommand("01234567\n"));
@@ -791,7 +791,7 @@ void CommandSenderTest::doNotCallCommandSentOfListenerIfListerWasDeleted()
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
 
     // Sending 16 time 8 bytes = 128 bytes, then some more bytes
-    for (auto i = 0; i < 16; ++i) {
+    for (auto i = 0u; i < 16u; ++i) {
         sender.sendCommand("0123456\n");
     }
     QVERIFY(sender.sendCommand("abcde\n", 123, listener.get()));

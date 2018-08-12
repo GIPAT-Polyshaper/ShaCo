@@ -16,7 +16,7 @@ namespace {
         return registered;
     }
 
-    QRegularExpression parseMachineInfoStr("\\[PolyShaper (.*)\\]\\[(.*)\\]");
+    QRegularExpression parseMachineInfoStr("\\[PolyShaper (.*)\\]\\[([^ ]*) ([^ ]*) ([^] ]*)\\]");
 }
 
 const bool MachineInfo::registered = registerMachineInfoMetaType();
@@ -26,7 +26,7 @@ MachineInfo MachineInfo::createFromString(QByteArray s)
     QRegularExpressionMatch match = parseMachineInfoStr.match(QString(s));
 
     if (match.hasMatch()) {
-        return MachineInfo(match.captured(1), match.captured(2));
+        return MachineInfo(match.captured(1), match.captured(2), match.captured(3), match.captured(4));
     } else {
         return MachineInfo();
     }
@@ -39,8 +39,10 @@ MachineInfo::MachineInfo()
 {
 }
 
-MachineInfo::MachineInfo(QString machineName, QString firmwareVersion)
+MachineInfo::MachineInfo(QString machineName, QString partNumber, QString serialNumber, QString firmwareVersion)
     : m_machineName(machineName)
+    , m_partNumber(partNumber)
+    , m_serialNumber(serialNumber)
     , m_firmwareVersion(firmwareVersion)
     , m_isValid(true)
 {

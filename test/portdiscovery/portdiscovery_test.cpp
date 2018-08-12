@@ -261,12 +261,14 @@ void PortDiscoveryTest::ifTheExpectedReplyIsReceivedEmitSignal()
 
     portDiscoverer.start();
 
-    serialPort->simulateReceivedData("[PolyShaper Oranje][1.2]ok\r\n");
+    serialPort->simulateReceivedData("[PolyShaper Oranje][pn123 sn456 789]ok\r\n");
 
     QCOMPARE(spy.count(), 1);
     auto machineInfo = spy.at(0).at(0).value<MachineInfo>();
     QCOMPARE(machineInfo.machineName(), "Oranje");
-    QCOMPARE(machineInfo.firmwareVersion(), "1.2");
+    QCOMPARE(machineInfo.partNumber(), "pn123");
+    QCOMPARE(machineInfo.serialNumber(), "sn456");
+    QCOMPARE(machineInfo.firmwareVersion(), "789");
     QCOMPARE(spy.at(0).at(1).value<AbstractPortDiscovery*>(), &portDiscoverer);
 }
 
@@ -283,7 +285,7 @@ void PortDiscoveryTest::stopPollingWhenAValidPortIsFound()
 
     portDiscoverer.start();
 
-    serialPort->simulateReceivedData("[PolyShaper Oranje][1.2]ok\r\n");
+    serialPort->simulateReceivedData("[PolyShaper Oranje][pn123 sn456 789]ok\r\n");
 
     QCOMPARE(spy.count(), 2); // hard reset + request of information
 
@@ -326,13 +328,15 @@ void PortDiscoveryTest::accumulateDataReceivedFromMachine()
     portDiscoverer.start();
 
     serialPort->simulateReceivedData("[PolyShap");
-    serialPort->simulateReceivedData("er Oranje][1.");
-    serialPort->simulateReceivedData("2]ok\r\n");
+    serialPort->simulateReceivedData("er Oranje][pn123 sn45");
+    serialPort->simulateReceivedData("6 789]ok\r\n");
 
     QCOMPARE(spy.count(), 1);
     auto machineInfo = spy.at(0).at(0).value<MachineInfo>();
     QCOMPARE(machineInfo.machineName(), "Oranje");
-    QCOMPARE(machineInfo.firmwareVersion(), "1.2");
+    QCOMPARE(machineInfo.partNumber(), "pn123");
+    QCOMPARE(machineInfo.serialNumber(), "sn456");
+    QCOMPARE(machineInfo.firmwareVersion(), "789");
     QCOMPARE(spy.at(0).at(1).value<AbstractPortDiscovery*>(), &portDiscoverer);
 }
 
@@ -507,14 +511,14 @@ void PortDiscoveryTest::whenObtainPortIsCalledReturnPortAndDisconnectFromSignals
 
     portDiscoverer.start();
 
-    serialPort->simulateReceivedData("[PolyShaper Oranje][1.2]ok\r\n");
+    serialPort->simulateReceivedData("[PolyShaper Oranje][pn123 sn456 789]ok\r\n");
 
     QCOMPARE(spy.count(), 1);
     auto foundPort = portDiscoverer.obtainPort();
     QCOMPARE(serialPort, foundPort.get());
 
     // Sending data again, nothing should happen
-    serialPort->simulateReceivedData("[PolyShaper Oranje][1.2]ok\r\n");
+    serialPort->simulateReceivedData("[PolyShaper Oranje][pn123 sn456 789]ok\r\n");
     QCOMPARE(spy.count(), 1);
 }
 

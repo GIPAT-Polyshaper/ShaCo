@@ -17,6 +17,9 @@ class MachineCommunicationTest : public QObject
 public:
     MachineCommunicationTest();
 
+private:
+    const MachineInfo m_info;
+
 private Q_SLOTS:
     void grabPortFromPortDiscovererWhenMachineFoundIsCalled();
     void writeDataToSerialPort();
@@ -43,6 +46,7 @@ private Q_SLOTS:
 };
 
 MachineCommunicationTest::MachineCommunicationTest()
+    : m_info("a", "pn", "sn", "1")
 {
 }
 
@@ -55,7 +59,7 @@ void MachineCommunicationTest::grabPortFromPortDiscovererWhenMachineFoundIsCalle
 
     QSignalSpy spy(&portDiscoverer, &TestPortDiscovery::serialPortMoved);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
 
     QCOMPARE(spy.count(), 1);
 }
@@ -75,7 +79,7 @@ void MachineCommunicationTest::writeDataToSerialPort()
 
     MachineCommunication communicator(100);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     communicator.writeData("some data to write");
 
     QCOMPARE(serialPort->writtenData(), "some data to write");
@@ -88,7 +92,7 @@ void MachineCommunicationTest::writeLineToSerialPort()
 
     MachineCommunication communicator(100);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     communicator.writeLine("some data to write");
 
     QCOMPARE(serialPort->writtenData(), "some data to write\n");
@@ -103,7 +107,7 @@ void MachineCommunicationTest::emitSignalWhenDataIsWritten()
 
     QSignalSpy spy(&communicator, &MachineCommunication::dataSent);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     communicator.writeLine("some data to write");
 
     QCOMPARE(spy.count(), 1);
@@ -120,7 +124,7 @@ void MachineCommunicationTest::emitSignalWhenDataIsReceived()
 
     QSignalSpy spy(&communicator, &MachineCommunication::dataReceived);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     serialPort->simulateReceivedData("Toc toc...");
 
     QCOMPARE(spy.count(), 1);
@@ -140,7 +144,7 @@ void MachineCommunicationTest::ifPortIsInErrorAfterWriteClosePortAndEmitSignal()
     QSignalSpy spyPortClosed(&communicator, &MachineCommunication::portClosedWithError);
     QSignalSpy spyDataSent(&communicator, &MachineCommunication::dataSent);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     communicator.writeLine("some data to write");
 
     serialPort->emitErrorSignal();
@@ -164,7 +168,7 @@ void MachineCommunicationTest::ifPortIsInErrorAfterReadClosePortAndEmitSignal()
     QSignalSpy spyPortClosed(&communicator, &MachineCommunication::portClosedWithError);
     QSignalSpy spyDataSent(&communicator, &MachineCommunication::dataSent);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     serialPort->simulateReceivedData("Toc toc...");
 
     serialPort->emitErrorSignal();
@@ -187,7 +191,7 @@ void MachineCommunicationTest::closePortWithError()
     QSignalSpy spyPortClosed(&communicator, &MachineCommunication::portClosedWithError);
     QSignalSpy spyDataSent(&communicator, &MachineCommunication::dataSent);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     communicator.closePortWithError("a generated error");
 
     QCOMPARE(spyPortDeleted.count(), 1);
@@ -208,7 +212,7 @@ void MachineCommunicationTest::closePortWithoutError()
     QSignalSpy spyPortClosed(&communicator, &MachineCommunication::portClosed);
     QSignalSpy spyDataSent(&communicator, &MachineCommunication::dataSent);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     communicator.closePort();
 
     QCOMPARE(spyPortDeleted.count(), 1);
@@ -225,7 +229,7 @@ void MachineCommunicationTest::emitSignalWhenPortIsGrabbedFromPortDiscovery()
 
     QSignalSpy spy(&communicator, &MachineCommunication::machineInitialized);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
 
     QCOMPARE(spy.count(), 1);
 }
@@ -239,7 +243,7 @@ void MachineCommunicationTest::sendFeedHoldWhenAskedTo()
 
     QSignalSpy spy(&communicator, &MachineCommunication::dataSent);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     communicator.feedHold();
 
     QCOMPARE(spy.count(), 1);
@@ -256,7 +260,7 @@ void MachineCommunicationTest::sendResumeFeedHoldWhenAskedTo()
 
     QSignalSpy spy(&communicator, &MachineCommunication::dataSent);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     communicator.resumeFeedHold();
 
     QCOMPARE(spy.count(), 1);
@@ -273,7 +277,7 @@ void MachineCommunicationTest::sendSoftResetWhenAskedTo()
 
     QSignalSpy spy(&communicator, &MachineCommunication::dataSent);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     communicator.softReset();
 
     QCOMPARE(spy.count(), 1);
@@ -290,7 +294,7 @@ void MachineCommunicationTest::doHardResetWhenAskedTo()
 
     QSignalSpy machineInitializedSpy(&communicator, &MachineCommunication::machineInitialized);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     QCOMPARE(machineInitializedSpy.count(), 1);
 
     QElapsedTimer timer;
@@ -312,7 +316,7 @@ void MachineCommunicationTest::emitCommandReceivedWhenACommandIsReceived()
 
     QSignalSpy spy(&communicator, &MachineCommunication::messageReceived);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     serialPort->simulateReceivedData("Toc toc...\r\n");
 
     QCOMPARE(spy.count(), 1);
@@ -329,7 +333,7 @@ void MachineCommunicationTest::doNotEmitCommandReceivedIfDataHasNotEndline()
 
     QSignalSpy spy(&communicator, &MachineCommunication::messageReceived);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
     serialPort->simulateReceivedData("Toc toc...");
 
     // message not received
@@ -345,7 +349,7 @@ void MachineCommunicationTest::sendCompleteCommandWhenReceivedInMultipleParts()
 
     QSignalSpy spy(&communicator, &MachineCommunication::messageReceived);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
 
     // This is used to schedule a function to be executed when the QT event loop is executed
     // (interval is 0)
@@ -376,7 +380,7 @@ void MachineCommunicationTest::sendCompletedCommandsIfEndlineInTheMiddleOfData()
 
     QSignalSpy spy(&communicator, &MachineCommunication::messageReceived);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
 
     // This is used to schedule a function to be executed when the QT event loop is executed
     // (interval is 0)
@@ -407,7 +411,7 @@ void MachineCommunicationTest::keepDataAfterEndlineForNextMessage()
 
     QSignalSpy spy(&communicator, &MachineCommunication::messageReceived);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
 
     // This is used to schedule a function to be executed when the QT event loop is executed
     // (interval is 0)
@@ -445,7 +449,7 @@ void MachineCommunicationTest::sendAllMessagesWhenMultipleAreReceivedWithTheSame
 
     QSignalSpy spy(&communicator, &MachineCommunication::messageReceived);
 
-    communicator.portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator.portFound(m_info, &portDiscoverer);
 
     // This is used to schedule a function to be executed when the QT event loop is executed
     // (interval is 0)

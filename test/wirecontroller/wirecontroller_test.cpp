@@ -55,7 +55,7 @@ void WireControllerTest::setInitialTemperatureAndEmitSignalWhenMachineIsInitiali
     QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
     QSignalSpy wireOffSpy(&wireController, &WireController::wireOff);
 
-    communicator->portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
 
     QCOMPARE(dataSentSpy.count(), 3);
     QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "M5\n");
@@ -415,7 +415,7 @@ void WireControllerTest::whenMachineInitializedSignalIsReceivedSwitchWireOffAndS
     QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
     QSignalSpy wireOffSpy(&wireController, &WireController::wireOff);
 
-    communicator->portFound(MachineInfo("a", "1"), &portDiscoverer);
+    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
 
     QCOMPARE(dataSentSpy.count(), 3);
     QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "M5\n");
