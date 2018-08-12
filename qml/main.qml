@@ -152,6 +152,20 @@ Window {
                         }
                     }
             }
+
+            Button {
+                height: 40
+                width: 40
+                anchors.right: parent.right
+                icon.source: "qrc:/images/reload.png"
+                icon.width: 22
+                icon.height: 22
+                flat: true
+                enabled: true
+                visible: stack.currentItem === mainView
+
+                onClicked: controller.reloadShapes()
+            }
         }
 
         StackView {

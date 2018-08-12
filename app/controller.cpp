@@ -239,6 +239,11 @@ void Controller::changeLocalShapesSort(QString sortBy)
     m_shapesModel.sortShapes(s);
 }
 
+void Controller::reloadShapes()
+{
+    m_shapesFinder.reload();
+}
+
 void Controller::gcodeSenderCreated(GCodeSender* sender)
 {
     connect(sender, &GCodeSender::streamingStarted, this, &Controller::streamingStarted);

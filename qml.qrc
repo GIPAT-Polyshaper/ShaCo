@@ -15,5 +15,6 @@
         <file>images/gears.gif</file>
         <file>images/ShaCo.icns</file>
         <file>images/ShaCo.ico</file>
+        <file>images/reload.png</file>
     </qresource>
 </RCC>

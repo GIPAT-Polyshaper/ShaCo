@@ -55,6 +55,7 @@ public slots:
     void feedHold();
     void resumeFeedHold();
     void changeLocalShapesSort(QString sortBy);
+    void reloadShapes();
 
 signals:
     void startedPortDiscovery();
