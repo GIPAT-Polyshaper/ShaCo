@@ -13,5 +13,7 @@
         <file>images/logo.png</file>
         <file>images/move_to_start.gif</file>
         <file>images/gears.gif</file>
+        <file>images/ShaCo.icns</file>
+        <file>images/ShaCo.ico</file>
     </qresource>
 </RCC>

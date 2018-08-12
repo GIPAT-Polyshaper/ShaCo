@@ -14,6 +14,9 @@ int main(int argc, char *argv[])
 #ifdef Q_OS_MACOS
     app.setWindowIcon(QIcon(":/images/ShaCo.icns"));
 #endif
+#ifdef Q_OS_WIN
+    app.setWindowIcon(QIcon(":/images/ShaCo.ico"));
+#endif
 
     // TODO: For the moment we use the default QT style "Fusion", perhaps create a custom style as needed
     QQuickStyle::setStyle("Fusion");

@@ -8,6 +8,7 @@ TARGET = ShaCo
 QT += quick quickcontrols2 serialport
 app.depends = core
 macx:ICON = ../images/ShaCo.icns
+win32:RC_ICONS = ../images/ShaCo.ico
 
 HEADERS += \
     controller.h \
