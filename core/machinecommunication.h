@@ -15,8 +15,10 @@ class MachineCommunication : public QObject
 public:
     MachineCommunication(unsigned int hardResetDelay);
 
+    const MachineInfo* machineInfo() const; // returns nullptr before a machine is initialized
+
 public slots:
-    void portFound(MachineInfo info, AbstractPortDiscovery* portDiscoverer);
+    void portFound(MachineInfo* info, AbstractPortDiscovery* portDiscoverer);
     void writeData(QByteArray data);
     void writeLine(QByteArray data); // Like writeData but adds \n at the end of data
     void closePortWithError(QString reason);
@@ -47,6 +49,7 @@ private:
     const unsigned int m_hardResetDelay;
     std::unique_ptr<SerialPortInterface> m_serialPort;
     QByteArray m_messageBuffer;
+    const MachineInfo* m_machineInfo;
 };
 
 #endif // MACHINECOMMUNICATION_H

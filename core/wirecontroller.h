@@ -46,6 +46,7 @@ private:
     bool m_wireOn;
     float m_baseTemperature; // The temperature set using setTemperature()
     int m_realTimePercent;
+    float m_machineScaleFactor;
 };
 
 #endif // WIRETEMPERATURECONTROLLER_H

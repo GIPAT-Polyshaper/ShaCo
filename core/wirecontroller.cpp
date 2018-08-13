@@ -16,13 +16,16 @@ WireController::WireController(MachineCommunication *communicator, CommandSender
     , m_wireOn(false)
     , m_baseTemperature(0.0f)
     , m_realTimePercent(100)
+    , m_machineScaleFactor(1.0f)
 {
     connect(m_communicator, &MachineCommunication::machineInitialized, this, &WireController::machineInitialized);
+    // In case the machine was already initialized
+    machineInitialized();
 }
 
 float WireController::temperature() const
 {
-    return m_realTimePercent * m_baseTemperature / 100.0f;
+    return m_realTimePercent * m_baseTemperature / 100.0f / m_machineScaleFactor;
 }
 
 bool WireController::isWireOn() const
@@ -42,7 +45,7 @@ float WireController::maxRealTimeTemperature() const
 
 void WireController::setTemperature(float temperature)
 {
-    m_baseTemperature = temperature;
+    m_baseTemperature = temperature * m_machineScaleFactor;
 
     // Always reset realtime override: here we want to set exactly the requested temperature
     m_communicator->writeData(QByteArray(1, ImmediateCommands::resetTemperature));
@@ -57,8 +60,9 @@ void WireController::setTemperature(float temperature)
 
 void WireController::setRealTimeTemperature(float temperature)
 {
+    const float actualTemperature = temperature * m_machineScaleFactor;
     const int curPercent = m_realTimePercent;
-    m_realTimePercent = static_cast<int>(std::round(temperature / m_baseTemperature * 100.0f));
+    m_realTimePercent = static_cast<int>(std::round(actualTemperature / m_baseTemperature * 100.0f));
     m_realTimePercent =
         std::min(maxPercentualRealTimeTemperature, std::max(minPercentualRealTimeTemperature, m_realTimePercent));
 
@@ -71,8 +75,8 @@ void WireController::setRealTimeTemperature(float temperature)
     const int numCoarseVariations = percentualVariations / 10;
     const int numFineVariations = percentualVariations % 10;
 
-    const char coarseCommand = (temperature < m_baseTemperature) ? ImmediateCommands::coarseTemperatureDecrement : ImmediateCommands::coarseTemperatureIncrement;
-    const char fineCommand = (temperature < m_baseTemperature) ? ImmediateCommands::fineTemperatureDecrement : ImmediateCommands::fineTemperatureIncrement;
+    const char coarseCommand = (actualTemperature < m_baseTemperature) ? ImmediateCommands::coarseTemperatureDecrement : ImmediateCommands::coarseTemperatureIncrement;
+    const char fineCommand = (actualTemperature < m_baseTemperature) ? ImmediateCommands::fineTemperatureDecrement : ImmediateCommands::fineTemperatureIncrement;
     QByteArray message(numCoarseVariations + numFineVariations, coarseCommand);
     for (auto i = numCoarseVariations; i < message.size(); ++i) {
         message[i] = fineCommand;
@@ -117,8 +121,17 @@ void WireController::switchWireOff()
 
 void WireController::machineInitialized()
 {
-    forceWireOff();
-    setTemperature(temperature());
+    if (m_communicator->machineInfo()) {
+        const auto oldFactor = m_machineScaleFactor;
+        m_machineScaleFactor = m_communicator->machineInfo()->maxWireTemperature() / 100.0f;
+
+        // Fix base temperature, in case factors are different. The percentual variation is reset to
+        // 100 by the setTemperature call below
+        m_baseTemperature *= m_machineScaleFactor / oldFactor;
+
+        forceWireOff();
+        setTemperature(temperature());
+    }
 }
 
 void WireController::emitTemperatureChanged()
