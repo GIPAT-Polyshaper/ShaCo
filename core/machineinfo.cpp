@@ -71,13 +71,65 @@ private:
     const QString m_machineName;
 };
 
+class OranjeMachineInfo : public MachineInfo
+{
+public:
+    OranjeMachineInfo(QString partNumber, QString serialNumber, QString firmwareVersion)
+        : MachineInfo(partNumber, serialNumber, firmwareVersion)
+    {}
+
+    virtual ~OranjeMachineInfo() override
+    {}
+
+    virtual QString machineName() const override
+    {
+        return "Oranje";
+    }
+
+    virtual float maxWireTemperature() const override
+    {
+        return 35.0f;
+    }
+};
+
+class AzulMachineInfo : public MachineInfo
+{
+public:
+    AzulMachineInfo(QString partNumber, QString serialNumber, QString firmwareVersion)
+        : MachineInfo(partNumber, serialNumber, firmwareVersion)
+    {}
+
+    virtual ~AzulMachineInfo() override
+    {}
+
+    virtual QString machineName() const override
+    {
+        return "Azul";
+    }
+
+    virtual float maxWireTemperature() const override
+    {
+        return 75.0f;
+    }
+};
+
 std::unique_ptr<MachineInfo> MachineInfo::createFromString(QByteArray s)
 {
     QRegularExpressionMatch match = parseMachineInfoStr.match(QString(s));
 
     if (match.hasMatch()) {
-        return std::make_unique<GenericMachineInfo>(match.captured(1), match.captured(2),
-                                                    match.captured(3), match.captured(4));
+        const auto& machineName = match.captured(1);
+
+        if (machineName == "Oranje") {
+            return std::make_unique<OranjeMachineInfo>(match.captured(2), match.captured(3),
+                                                       match.captured(4));
+        } else if (machineName == "Azul") {
+            return std::make_unique<AzulMachineInfo>(match.captured(2), match.captured(3),
+                                                     match.captured(4));
+        } else {
+            return std::make_unique<GenericMachineInfo>(machineName, match.captured(2),
+                                                        match.captured(3), match.captured(4));
+        }
     } else {
         return std::unique_ptr<MachineInfo>();
     }
