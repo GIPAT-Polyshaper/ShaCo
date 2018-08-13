@@ -135,6 +135,11 @@ qint64 Controller::cutProgress() const
     return m_cutProgress;
 }
 
+unsigned long Controller::characterSendDelayUs() const
+{
+    return m_settings.characterSendDelayUs();
+}
+
 void Controller::sendLine(QByteArray line)
 {
     auto p = m_thread.worker()->machineCommunicator();
@@ -242,6 +247,20 @@ void Controller::changeLocalShapesSort(QString sortBy)
 void Controller::reloadShapes()
 {
     m_shapesFinder.reload();
+}
+
+void Controller::setCharacterSendDelayUs(unsigned long us)
+{
+    if (m_settings.characterSendDelayUs() == us) {
+        return;
+    }
+
+    m_settings.setCharacterSendDelayUs(us);
+
+    auto p = m_thread.worker();
+    QMetaObject::invokeMethod(p, [p](){ p->updateCharacterSendDelayUs(); });
+
+    emit characterSendDelayUsChanged();
 }
 
 void Controller::gcodeSenderCreated(GCodeSender* sender)

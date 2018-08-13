@@ -78,6 +78,13 @@ void MachineCommunication::hardReset()
     emit machineInitialized();
 }
 
+void MachineCommunication::setCharacterSendDelayUs(unsigned long us)
+{
+    if (m_serialPort) {
+        m_serialPort->setCharacterSendDelayUs(us);
+    }
+}
+
 void MachineCommunication::readData()
 {
     auto data = m_serialPort->readAll();

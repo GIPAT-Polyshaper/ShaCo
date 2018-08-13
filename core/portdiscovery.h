@@ -24,6 +24,7 @@ public:
     }
 
     virtual std::unique_ptr<SerialPortInterface> obtainPort() = 0;
+    virtual void setCharacterSendDelayUs(unsigned long us) = 0;
 
 public slots:
     virtual void start() = 0;
@@ -47,26 +48,20 @@ public:
     // scanDelayMillis is how much to wait between two consecutive scans in milliseconds,
     // portReadInterval is for how long to attempt to read from a possibly matching port in
     // milliseconds and maxReadAttemptsPerPort is how many attempts to do before moving to another
-    // port
-    PortDiscovery(PortListingFuncT portListingFunc, SerialPortFactoryT serialPortFactory, int scanDelayMillis, int portPollInterval, int maxReadAttemptsPerPort)
+    // port. characterSendDelayUs is the value to set on every opened serial port
+    PortDiscovery(PortListingFuncT portListingFunc, SerialPortFactoryT serialPortFactory, int scanDelayMillis, int portPollInterval, int maxReadAttemptsPerPort, unsigned long characterSendDelayUs)
         : AbstractPortDiscovery()
         , m_portListingFunc(portListingFunc)
         , m_serialPortFactory(serialPortFactory)
         , m_scanDelayMillis(scanDelayMillis)
         , m_portPollInterval(portPollInterval)
         , m_maxReadAttemptsPerPort(maxReadAttemptsPerPort)
+        , m_characterSendDelayUs(characterSendDelayUs)
         , m_currentPortAttempt(0)
         , m_searchingPort(false)
     {
         m_timer.setSingleShot(true);
         connect(&m_timer, &QTimer::timeout, this, &PortDiscovery::timeout);
-    }
-
-    void start() override
-    {
-        emit startedDiscoveringPort();
-
-        searchPort();
     }
 
     // This returns an open serial port for the found machine after the portFound signal is emitted.
@@ -75,6 +70,18 @@ public:
     {
         m_serialPort->disconnect(this);
         return std::move(m_serialPort);
+    }
+
+    void setCharacterSendDelayUs(unsigned long us) override
+    {
+        m_characterSendDelayUs = us;
+    }
+
+    void start() override
+    {
+        emit startedDiscoveringPort();
+
+        searchPort();
     }
 
 private:
@@ -129,6 +136,7 @@ private:
         connect(m_serialPort.get(), &SerialPortInterface::errorOccurred,
                 this, &PortDiscovery<SerialPortInfo>::serialPortError);
 
+        m_serialPort->setCharacterSendDelayUs(m_characterSendDelayUs);
         m_serialPort->open();
 
         // m_serialPort might be reset in case of errors
@@ -195,6 +203,7 @@ private:
     const int m_scanDelayMillis;
     const int m_portPollInterval;
     const int m_maxReadAttemptsPerPort;
+    int m_characterSendDelayUs;
     QTimer m_timer;
     std::unique_ptr<SerialPortInterface> m_serialPort;
     QByteArray m_receivedData;

@@ -25,6 +25,7 @@ public slots:
     void resumeFeedHold();
     void softReset(); // Be careful: after this the firmare will probably go alarm and require a hard reset
     void hardReset(); // Closes and re-open port. Emits machineInitialized
+    void setCharacterSendDelayUs(unsigned long us);
 
 signals:
     void dataSent(QByteArray data);

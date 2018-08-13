@@ -9,6 +9,9 @@
 int main(int argc, char *argv[])
 {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QCoreApplication::setOrganizationName("PolyShaper");
+    QCoreApplication::setOrganizationDomain("polyshaper.eu");
+    QCoreApplication::setApplicationName("ShaCo");
 
     QGuiApplication app(argc, argv);
 #ifdef Q_OS_MACOS

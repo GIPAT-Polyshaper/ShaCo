@@ -3,6 +3,7 @@
 TestSerialPort::TestSerialPort()
     : SerialPortInterface()
     , m_inError(false)
+    , m_characterSendDelayUs(0)
 {
 }
 
@@ -40,6 +41,16 @@ QString TestSerialPort::errorString() const
 void TestSerialPort::close()
 {
     emit portClosed();
+}
+
+void TestSerialPort::setCharacterSendDelayUs(unsigned long us)
+{
+    m_characterSendDelayUs = us;
+}
+
+unsigned long TestSerialPort::characterSendDelayUs() const
+{
+    return m_characterSendDelayUs;
 }
 
 QByteArray TestSerialPort::writtenData() const

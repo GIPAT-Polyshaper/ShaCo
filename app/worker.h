@@ -11,6 +11,7 @@
 #include "core/machinestatusmonitor.h"
 #include "core/portdiscovery.h"
 #include "core/wirecontroller.h"
+#include "settings.h"
 
 class Controller;
 class Worker;
@@ -53,11 +54,13 @@ public:
 
 public slots:
     void setGCodeFile(QUrl fileUrl);
+    void updateCharacterSendDelayUs();
 
 signals:
     void gcodeSenderCreated(GCodeSender* sender);
 
 private:
+    const Settings m_settings; // We only read settings on this thread
     std::unique_ptr<PortDiscovery<QSerialPortInfo>> m_portDiscoverer;
     std::unique_ptr<MachineCommunication> m_machineCommunicator;
     std::unique_ptr<CommandSender> m_commandSender;

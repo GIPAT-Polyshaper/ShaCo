@@ -11,6 +11,7 @@ public:
     TestPortDiscovery(SerialPortInterface* serialPort);
 
     std::unique_ptr<SerialPortInterface> obtainPort() override;
+    void setCharacterSendDelayUs(unsigned long us) override;
     void start() override;
 
 signals:

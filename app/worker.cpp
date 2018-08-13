@@ -26,7 +26,7 @@ void WorkerThread::run()
 }
 
 Worker::Worker()
-    : m_portDiscoverer(new PortDiscovery<QSerialPortInfo>(QSerialPortInfo::availablePorts, [](QSerialPortInfo p){ return std::make_unique<SerialPort>(p); }, 1000, 300, 5))
+    : m_portDiscoverer(new PortDiscovery<QSerialPortInfo>(QSerialPortInfo::availablePorts, [](QSerialPortInfo p){ return std::make_unique<SerialPort>(p); }, 1000, 300, 5, m_settings.characterSendDelayUs()))
     , m_machineCommunicator(new MachineCommunication(1000))
     , m_commandSender(new CommandSender(m_machineCommunicator.get()))
     , m_wireController(new WireController(m_machineCommunicator.get(), m_commandSender.get()))
@@ -72,4 +72,11 @@ void Worker::setGCodeFile(QUrl fileUrl)
     m_gcodeSender = std::make_unique<GCodeSender>(m_machineCommunicator.get(), m_commandSender.get(), m_wireController.get(), m_statusMonitor.get(), std::move(file));
 
     emit gcodeSenderCreated(m_gcodeSender.get());
+}
+
+void Worker::updateCharacterSendDelayUs()
+{
+    const auto us = m_settings.characterSendDelayUs();
+    m_portDiscoverer->setCharacterSendDelayUs(us);
+    m_machineCommunicator->setCharacterSendDelayUs(us);
 }

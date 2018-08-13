@@ -85,6 +85,19 @@ ColumnLayout {
         }
     }
 
+    Button {
+        id: terminalEnabled
+
+        Layout.fillHeight: false
+        Layout.fillWidth: true
+        Layout.margins: 3
+        checkable: true
+        checked: false
+        enabled: true
+
+        text: checked ? qsTr("Terminal Enabled") : qsTr("Enable Terminal")
+    }
+
     RowLayout {
         Layout.fillHeight: false
         Layout.preferredHeight: 50
@@ -128,18 +141,35 @@ ColumnLayout {
                 textField.text = ""
             }
         }
+    }
 
-        Button {
-            id: terminalEnabled
+    RowLayout {
+        Layout.fillHeight: false
+        Layout.preferredHeight: 50
+        Layout.fillWidth: true
 
+        Text {
             Layout.fillHeight: true
             Layout.fillWidth: false
             Layout.margins: 3
-            checkable: true
-            checked: false
-            enabled: true
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            text: qsTr("Character send delay (μs):")
+        }
 
-            text: checked ? qsTr("Enabled") : qsTr("Enable")
+        SpinBox {
+            id: characterSendDelayBox
+
+            Layout.fillHeight: true
+            Layout.fillWidth: true
+            Layout.margins: 3
+            editable: true
+            from: 0
+            to: 1000000
+            stepSize: 1000
+            value: controller.characterSendDelayUs
+
+            onValueModified: controller.characterSendDelayUs = value;
         }
     }
 

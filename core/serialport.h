@@ -20,6 +20,8 @@ public:
     virtual QByteArray readAll() = 0;
     virtual QString errorString() const = 0;
     virtual void close() = 0;
+    virtual void setCharacterSendDelayUs(unsigned long us) = 0;
+    virtual unsigned long characterSendDelayUs() const = 0;
 
 signals:
     void dataAvailable();
@@ -38,12 +40,15 @@ public:
     QByteArray readAll() override;
     QString errorString() const override;
     void close() override;
+    void setCharacterSendDelayUs(unsigned long us) override;
+    unsigned long characterSendDelayUs() const override;
 
 private:
     void signalErrorOccurred(QSerialPort::SerialPortError error);
 
 private:
     QSerialPort m_serialPort;
+    unsigned long m_characterSendDelayUs;
 };
 
 #endif // SERIALPORT_H
