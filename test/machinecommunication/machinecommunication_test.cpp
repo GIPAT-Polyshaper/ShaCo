@@ -46,6 +46,7 @@ private Q_SLOTS:
     void doNotEmitSignalWhenClosingPortIfPortIsClosed();
     void setCharacterSendDelayUsInSerialPortWhenAskedTo();
     void doNotSetCharacterSendDelayUsInSerialPortIfClosed();
+    void storeMachineInfoWhenReceived();
 };
 
 MachineCommunicationTest::MachineCommunicationTest()
@@ -517,6 +518,20 @@ void MachineCommunicationTest::doNotSetCharacterSendDelayUsInSerialPortIfClosed(
 
     // This should simply not crash
     communicator.setCharacterSendDelayUs(1317);
+}
+
+void MachineCommunicationTest::storeMachineInfoWhenReceived()
+{
+    auto serialPort = new TestSerialPort();
+    TestPortDiscovery portDiscoverer(serialPort);
+
+    MachineCommunication communicator(100);
+
+    QCOMPARE(communicator.machineInfo(), nullptr);
+
+    communicator.portFound(m_info.get(), &portDiscoverer);
+
+    QCOMPARE(communicator.machineInfo(), m_info.get());
 }
 
 QTEST_GUILESS_MAIN(MachineCommunicationTest)

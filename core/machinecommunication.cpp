@@ -6,11 +6,19 @@ MachineCommunication::MachineCommunication(unsigned int hardResetDelay)
     : QObject()
     , m_hardResetDelay(hardResetDelay)
     , m_serialPort()
+    , m_machineInfo(nullptr)
 {
 }
 
-void MachineCommunication::portFound(MachineInfo*, AbstractPortDiscovery* portDiscoverer)
+const MachineInfo* MachineCommunication::machineInfo() const
 {
+    return m_machineInfo;
+}
+
+void MachineCommunication::portFound(MachineInfo* info, AbstractPortDiscovery* portDiscoverer)
+{
+    m_machineInfo = info;
+
     m_serialPort = portDiscoverer->obtainPort();
 
     connect(m_serialPort.get(), &SerialPortInterface::dataAvailable, this, &MachineCommunication::readData);
