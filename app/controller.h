@@ -81,7 +81,7 @@ signals:
 
 private slots:
     void gcodeSenderCreated(GCodeSender* sender);
-    void signalPortFound(MachineInfo info);
+    void signalPortFound(MachineInfo* info);
     void signalPortClosedWithError(QString reason);
     void signalPortClosed();
     void streamingStarted();

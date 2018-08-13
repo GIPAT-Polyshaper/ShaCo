@@ -33,6 +33,19 @@ Worker::Worker()
     , m_statusMonitor(new MachineStatusMonitor(1000, 3000, m_machineCommunicator.get())) // polling every second
 {
     m_wireController->setTemperature(m_settings.wireTemperature());
+
+    connect(
+        m_portDiscoverer.get(), &PortDiscovery<QSerialPortInfo>::portFound,
+        m_machineCommunicator.get(), &MachineCommunication::portFound
+    );
+    connect(
+        m_machineCommunicator.get(), &MachineCommunication::portClosedWithError,
+        m_portDiscoverer.get(), &PortDiscovery<QSerialPortInfo>::start
+    );
+    connect(
+        m_machineCommunicator.get(), &MachineCommunication::portClosed,
+        m_portDiscoverer.get(), &PortDiscovery<QSerialPortInfo>::start
+    );
 }
 
 PortDiscovery<QSerialPortInfo>* Worker::portDiscoverer() const

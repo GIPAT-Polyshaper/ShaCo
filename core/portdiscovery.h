@@ -33,8 +33,9 @@ signals:
     void startedDiscoveringPort();
     // After this signal is sent, it is possible to retrieve the open serial port using
     // PortDiscovery::obtainPort(). portDiscoverer is the instance of PortDiscovery that found the
-    // port, beware of threading issues
-    void portFound(MachineInfo info, AbstractPortDiscovery* portDiscoverer);
+    // port, beware of threading issues. info must not be deleted, but it is guaranteed to be
+    // thread-safe. It is valid until a new port is found
+    void portFound(MachineInfo* info, AbstractPortDiscovery* portDiscoverer);
 };
 
 template <class SerialPortInfo>
@@ -192,8 +193,9 @@ private:
         qDebug() << "Message received from machine:" << m_receivedData;
 
         auto info = MachineInfo::createFromString(m_receivedData);
-        if (info.isValid()) {
-            emit portFound(info, this);
+        if (info) {
+            m_machineInfo = std::move(info);
+            emit portFound(m_machineInfo.get(), this);
             m_timer.stop();
         }
     }
@@ -210,6 +212,7 @@ private:
     int m_currentPortAttempt;
     QList<SerialPortInfo> m_portsQueue;
     bool m_searchingPort;
+    std::unique_ptr<MachineInfo> m_machineInfo;
 
     // Sets searchingPort to true in costructor and to false in destructor
     class SearchingPortRAII {

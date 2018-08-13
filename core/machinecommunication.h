@@ -16,7 +16,7 @@ public:
     MachineCommunication(unsigned int hardResetDelay);
 
 public slots:
-    void portFound(MachineInfo info, AbstractPortDiscovery* portDiscoverer);
+    void portFound(MachineInfo* info, AbstractPortDiscovery* portDiscoverer);
     void writeData(QByteArray data);
     void writeLine(QByteArray data); // Like writeData but adds \n at the end of data
     void closePortWithError(QString reason);

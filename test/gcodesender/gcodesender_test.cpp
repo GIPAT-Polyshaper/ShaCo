@@ -8,6 +8,7 @@
 #include "core/machinecommunication.h"
 #include "core/machinestatusmonitor.h"
 #include "core/wirecontroller.h"
+#include "testcommon/testmachineinfo.h"
 #include "testcommon/testportdiscovery.h"
 #include "testcommon/testserialport.h"
 #include "testcommon/utils.h"
@@ -61,6 +62,7 @@ class GCodeSenderTest : public QObject
     Q_OBJECT
 
     struct Requirements {
+        TestMachineInfo machineInfo;
         std::unique_ptr<MachineCommunication> communicator;
         TestSerialPort* serialPort;
         std::unique_ptr<CommandSender> commandSender;
@@ -112,7 +114,7 @@ GCodeSenderTest::Requirements GCodeSenderTest::createRequirements(bool setStateT
 {
     Requirements r;
 
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&(r.machineInfo));
     r.communicator = std::move(communicatorAndPort.first);
     r.serialPort = communicatorAndPort.second;
     r.commandSender = std::make_unique<CommandSender>(r.communicator.get());

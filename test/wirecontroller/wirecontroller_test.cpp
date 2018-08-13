@@ -4,6 +4,7 @@
 #include "core/commandsender.h"
 #include "core/machinecommunication.h"
 #include "core/wirecontroller.h"
+#include "testcommon/testmachineinfo.h"
 #include "testcommon/testportdiscovery.h"
 #include "testcommon/testserialport.h"
 #include "testcommon/utils.h"
@@ -14,6 +15,9 @@ class WireControllerTest : public QObject
 
 public:
     WireControllerTest();
+
+private:
+    TestMachineInfo m_info;
 
 private Q_SLOTS:
     void setInitialTemperatureAndEmitSignalWhenMachineIsInitialized();
@@ -56,7 +60,7 @@ void WireControllerTest::setInitialTemperatureAndEmitSignalWhenMachineIsInitiali
     QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
     QSignalSpy wireOffSpy(&wireController, &WireController::wireOff);
 
-    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
+    communicator->portFound(&m_info, &portDiscoverer);
 
     QCOMPARE(dataSentSpy.count(), 3);
     QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "M5\n");
@@ -70,7 +74,7 @@ void WireControllerTest::setInitialTemperatureAndEmitSignalWhenMachineIsInitiali
 
 void WireControllerTest::setTemperatureWithGCodeCommand()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
@@ -91,7 +95,7 @@ void WireControllerTest::setTemperatureWithGCodeCommand()
 
 void WireControllerTest::switchWireOn()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
@@ -112,7 +116,7 @@ void WireControllerTest::switchWireOn()
 
 void WireControllerTest::doNotEmitSignalWhenSwitchWireOnIsCalledAndWireIsAlreadyOn()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -128,7 +132,7 @@ void WireControllerTest::doNotEmitSignalWhenSwitchWireOnIsCalledAndWireIsAlready
 
 void WireControllerTest::switchWireOff()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
@@ -149,7 +153,7 @@ void WireControllerTest::switchWireOff()
 
 void WireControllerTest::doNotEmitSignalWhenSwitchWireOffIsCalledAndWireIsAlreadyOff()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -164,7 +168,7 @@ void WireControllerTest::doNotEmitSignalWhenSwitchWireOffIsCalledAndWireIsAlread
 
 void WireControllerTest::computeTheMinumAndMaximumValuesForSetRealTimeTemperature()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -177,7 +181,7 @@ void WireControllerTest::computeTheMinumAndMaximumValuesForSetRealTimeTemperatur
 
 void WireControllerTest::setRealTimeTemperatureToALowerTemperature()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -198,7 +202,7 @@ void WireControllerTest::setRealTimeTemperatureToALowerTemperature()
 
 void WireControllerTest::setRealTimeTemperatureToAHigherTemperature()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -219,7 +223,7 @@ void WireControllerTest::setRealTimeTemperatureToAHigherTemperature()
 
 void WireControllerTest::doNotAllowReatTimeTemperaturesLowerThanMinRealTimeTemperature()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -240,7 +244,7 @@ void WireControllerTest::doNotAllowReatTimeTemperaturesLowerThanMinRealTimeTempe
 
 void WireControllerTest::doNotAllowReatTimeTemperaturesHIgherThanMaxRealTimeTemperature()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -261,7 +265,7 @@ void WireControllerTest::doNotAllowReatTimeTemperaturesHIgherThanMaxRealTimeTemp
 
 void WireControllerTest::setRealTimeTemperatureMoreThanOnce()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -284,7 +288,7 @@ void WireControllerTest::setRealTimeTemperatureMoreThanOnce()
 
 void WireControllerTest::whenSettingRealTimeTemperatureAfterACallToSetTemperatureStartFromResetRealTimeOverride()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -308,7 +312,7 @@ void WireControllerTest::whenSettingRealTimeTemperatureAfterACallToSetTemperatur
 
 void WireControllerTest::setRealTimeTemperatureDoesNotEmitSignalIfTemperatureDoesNotChange()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -327,7 +331,7 @@ void WireControllerTest::setRealTimeTemperatureDoesNotEmitSignalIfTemperatureDoe
 
 void WireControllerTest::resetRealTimeTemperature()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -350,7 +354,7 @@ void WireControllerTest::resetRealTimeTemperature()
 
 void WireControllerTest::resetRealTimeTemperatureDoesNothingIfRealTimeTemperatureIsEqualToBaseTemperature()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -367,7 +371,7 @@ void WireControllerTest::resetRealTimeTemperatureDoesNothingIfRealTimeTemperatur
 
 void WireControllerTest::setRealTimeTemperatureAfterResetRealTimeTemperatureWorksCorrectly()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -391,7 +395,7 @@ void WireControllerTest::setRealTimeTemperatureAfterResetRealTimeTemperatureWork
 
 void WireControllerTest::returnTheCurrentTemperature()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender commandSender(communicator.get());
 
     WireController wireController(communicator.get(), &commandSender);
@@ -417,7 +421,7 @@ void WireControllerTest::whenMachineInitializedSignalIsReceivedSwitchWireOffAndS
     QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
     QSignalSpy wireOffSpy(&wireController, &WireController::wireOff);
 
-    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
+    communicator->portFound(&m_info, &portDiscoverer);
 
     QCOMPARE(dataSentSpy.count(), 3);
     QCOMPARE(dataSentSpy.at(0).at(0).toByteArray(), "M5\n");

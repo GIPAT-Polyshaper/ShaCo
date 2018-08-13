@@ -2,6 +2,7 @@
 #include <QtTest>
 #include <QTime>
 #include "core/machinestatusmonitor.h"
+#include "testcommon/testmachineinfo.h"
 #include "testcommon/testportdiscovery.h"
 #include "testcommon/testserialport.h"
 #include "testcommon/utils.h"
@@ -12,6 +13,9 @@ class MachineStatusMonitorTest : public QObject
 
 public:
     MachineStatusMonitorTest();
+
+private:
+    TestMachineInfo m_info;
 
 private Q_SLOTS:
     void sendStatusReportQueryCommandWhenMachineIsInitialized();
@@ -44,7 +48,7 @@ void MachineStatusMonitorTest::sendStatusReportQueryCommandWhenMachineIsInitiali
 
     QCOMPARE(spy.count(), 0);
 
-    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
+    communicator->portFound(&m_info, &portDiscoverer);
 
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.at(0).at(0).toByteArray(), "?");
@@ -62,7 +66,7 @@ void MachineStatusMonitorTest::periodicallySendStatusReportQueryCommand()
 
     QCOMPARE(spy.count(), 0);
 
-    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
+    communicator->portFound(&m_info, &portDiscoverer);
 
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.at(0).at(0).toByteArray(), "?");
@@ -81,7 +85,7 @@ void MachineStatusMonitorTest::periodicallySendStatusReportQueryCommand()
 
 void MachineStatusMonitorTest::returnUnknownStatusAtStart()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
 
     MachineStatusMonitor statusMonitor(500, 10000, communicator.get());
 
@@ -90,7 +94,7 @@ void MachineStatusMonitorTest::returnUnknownStatusAtStart()
 
 void MachineStatusMonitorTest::emitStateChangedSignalIfStatusChangesToIdle()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
 
@@ -107,7 +111,7 @@ void MachineStatusMonitorTest::emitStateChangedSignalIfStatusChangesToIdle()
 
 void MachineStatusMonitorTest::ignoreNonStatusMessages()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
 
@@ -122,7 +126,7 @@ void MachineStatusMonitorTest::ignoreNonStatusMessages()
 
 void MachineStatusMonitorTest::doNotEmitStateChangedSignalIfStatusDoesNotChange()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
 
@@ -143,7 +147,7 @@ void MachineStatusMonitorTest::doNotEmitStateChangedSignalIfStatusDoesNotChange(
 
 void MachineStatusMonitorTest::emitStateChangedSignalIfStatusChangesToOtherStates()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
 
@@ -160,7 +164,7 @@ void MachineStatusMonitorTest::emitStateChangedSignalIfStatusChangesToOtherState
 
 void MachineStatusMonitorTest::resetStateToUnknownWhenPortClosed()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
 
@@ -183,7 +187,7 @@ void MachineStatusMonitorTest::resetStateToUnknownWhenPortClosed()
 
 void MachineStatusMonitorTest::resetStateToUnknownWhenPortClosedWithError()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
 
@@ -206,7 +210,7 @@ void MachineStatusMonitorTest::resetStateToUnknownWhenPortClosedWithError()
 
 void MachineStatusMonitorTest::resetStateToUnknownWhenMachineIsInitialized()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
 
@@ -237,7 +241,7 @@ void MachineStatusMonitorTest::closePortIfNoMessageIsReceivedWithinWatchdogDelay
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::portClosedWithError);
 
-    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
+    communicator->portFound(&m_info, &portDiscoverer);
 
     // Port not closed
     QVERIFY(!spy.wait(750));

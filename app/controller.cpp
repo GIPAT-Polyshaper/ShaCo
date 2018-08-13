@@ -40,10 +40,6 @@ void Controller::creationFinished()
         this, &Controller::signalPortFound
     );
     connect(
-        m_thread.worker()->portDiscoverer(), &PortDiscovery<QSerialPortInfo>::portFound,
-        m_thread.worker()->machineCommunicator(), &MachineCommunication::portFound
-    );
-    connect(
         m_thread.worker()->machineCommunicator(), &MachineCommunication::dataSent,
         this, &Controller::dataSent
     );
@@ -56,16 +52,8 @@ void Controller::creationFinished()
         this, &Controller::signalPortClosedWithError
     );
     connect(
-        m_thread.worker()->machineCommunicator(), &MachineCommunication::portClosedWithError,
-        m_thread.worker()->portDiscoverer(), &PortDiscovery<QSerialPortInfo>::start
-    );
-    connect(
         m_thread.worker()->machineCommunicator(), &MachineCommunication::portClosed,
         this, &Controller::signalPortClosed
-    );
-    connect(
-        m_thread.worker()->machineCommunicator(), &MachineCommunication::portClosed,
-        m_thread.worker()->portDiscoverer(), &PortDiscovery<QSerialPortInfo>::start
     );
     connect(
         m_thread.worker()->wireController(), &WireController::temperatureChanged,
@@ -274,12 +262,12 @@ void Controller::gcodeSenderCreated(GCodeSender* sender)
     emit senderCreatedChanged();
 }
 
-void Controller::signalPortFound(MachineInfo info)
+void Controller::signalPortFound(MachineInfo *info)
 {
     m_connected = true;
     m_senderCreated = false;
 
-    emit portFound(info.machineName(), info.partNumber(), info.serialNumber(), info.firmwareVersion());
+    emit portFound(info->machineName(), info->partNumber(), info->serialNumber(), info->firmwareVersion());
     emit connectedChanged();
 }
 

@@ -7,6 +7,7 @@
 #include <QtTest>
 #include "core/commandsender.h"
 #include "core/machinecommunication.h"
+#include "testcommon/testmachineinfo.h"
 #include "testcommon/testportdiscovery.h"
 #include "testcommon/testserialport.h"
 #include "testcommon/utils.h"
@@ -71,6 +72,9 @@ class CommandSenderTest : public QObject
 public:
     CommandSenderTest();
 
+private:
+    TestMachineInfo m_info;
+
 private Q_SLOTS:
     void return0PendingCommandsAtStart();
     void returnFalseIfAttemptingToSendCommandLongerThan127BytesWithNoEndline();
@@ -113,7 +117,7 @@ CommandSenderTest::CommandSenderTest()
 
 void CommandSenderTest::return0PendingCommandsAtStart()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QCOMPARE(sender.pendingCommands(), 0);
@@ -121,7 +125,7 @@ void CommandSenderTest::return0PendingCommandsAtStart()
 
 void CommandSenderTest::returnFalseIfAttemptingToSendCommandLongerThan127BytesWithNoEndline()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QVERIFY(!sender.sendCommand(QByteArray(128, 'X')));
@@ -129,7 +133,7 @@ void CommandSenderTest::returnFalseIfAttemptingToSendCommandLongerThan127BytesWi
 
 void CommandSenderTest::returnTrueIfAttemptingToSendCommand128BytesLongWithEndline()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QByteArray command(128, 'X');
@@ -139,7 +143,7 @@ void CommandSenderTest::returnTrueIfAttemptingToSendCommand128BytesLongWithEndli
 
 void CommandSenderTest::sendCommandWhenRequested()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
@@ -152,7 +156,7 @@ void CommandSenderTest::sendCommandWhenRequested()
 
 void CommandSenderTest::appendEndlineIfMissing()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
@@ -165,7 +169,7 @@ void CommandSenderTest::appendEndlineIfMissing()
 
 void CommandSenderTest::returnFalseIfCommandHasEndlineInTheMiddle()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
@@ -177,7 +181,7 @@ void CommandSenderTest::returnFalseIfCommandHasEndlineInTheMiddle()
 
 void CommandSenderTest::returnFalseIfCarriageReturnIsPresent()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
@@ -189,7 +193,7 @@ void CommandSenderTest::returnFalseIfCarriageReturnIsPresent()
 
 void CommandSenderTest::callOkReplyOfListenerWhenOkIsReceived()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -206,7 +210,7 @@ void CommandSenderTest::callOkReplyOfListenerWhenOkIsReceived()
 
 void CommandSenderTest::callErroReplyOfListenerWhenErrorIsReceived()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -225,7 +229,7 @@ void CommandSenderTest::callErroReplyOfListenerWhenErrorIsReceived()
 
 void CommandSenderTest::ignoreUnknownMessages()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -242,7 +246,7 @@ void CommandSenderTest::ignoreUnknownMessages()
 
 void CommandSenderTest::callTheRightListenerWhenMessageIsReceived()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -269,7 +273,7 @@ void CommandSenderTest::callTheRightListenerWhenMessageIsReceived()
 
 void CommandSenderTest::doNotCallListenerIfNullWhenCommandSucceeds()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -282,7 +286,7 @@ void CommandSenderTest::doNotCallListenerIfNullWhenCommandSucceeds()
 
 void CommandSenderTest::doNotCallListenerIfNullWhenCommandFails()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -295,7 +299,7 @@ void CommandSenderTest::doNotCallListenerIfNullWhenCommandFails()
 
 void CommandSenderTest::ignoreUnexpectedOkMessages()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -306,7 +310,7 @@ void CommandSenderTest::ignoreUnexpectedOkMessages()
 
 void CommandSenderTest::ignoreUnexpectedErrorMessages()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -317,7 +321,7 @@ void CommandSenderTest::ignoreUnexpectedErrorMessages()
 
 void CommandSenderTest::doNotSendOkNotificationsToDeletedListeners()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -334,7 +338,7 @@ void CommandSenderTest::doNotSendOkNotificationsToDeletedListeners()
 
 void CommandSenderTest::doNotSendErrorNotificationsToDeletedListeners()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -351,7 +355,7 @@ void CommandSenderTest::doNotSendErrorNotificationsToDeletedListeners()
 
 void CommandSenderTest::doNotSendMoreThan128BytesWithoutAReply()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
@@ -371,7 +375,7 @@ void CommandSenderTest::doNotSendMoreThan128BytesWithoutAReply()
 
 void CommandSenderTest::sendCommandThatExceeds128BytesAfterReplyReceived()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -396,7 +400,7 @@ void CommandSenderTest::sendCommandThatExceeds128BytesAfterReplyReceived()
 
 void CommandSenderTest::returnTheNumberOfPendingCommands()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     // Sending 16 time 8 bytes = 128 bytes, then some more commands
@@ -412,7 +416,7 @@ void CommandSenderTest::returnTheNumberOfPendingCommands()
 
 void CommandSenderTest::doNotSentCommandIfItsSizeCausesSentBytesToExceed128()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
@@ -428,7 +432,7 @@ void CommandSenderTest::doNotSentCommandIfItsSizeCausesSentBytesToExceed128()
 
 void CommandSenderTest::sendAsManyEnqueuedCommandsAsPossibleAfterAReply()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -458,7 +462,7 @@ void CommandSenderTest::sendAsManyEnqueuedCommandsAsPossibleAfterAReply()
 
 void CommandSenderTest::sendQueuedCommandsWhenReplyIsError()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -488,7 +492,7 @@ void CommandSenderTest::sendQueuedCommandsWhenReplyIsError()
 
 void CommandSenderTest::resetSentMessagesWhenPortClosed()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
@@ -506,7 +510,7 @@ void CommandSenderTest::resetSentMessagesWhenPortClosed()
     communicator->closePort();
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
-    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
+    communicator->portFound(&m_info, &portDiscoverer);
 
     // New commands should be sent immediately and old one discarded
     sender.sendCommand("abc\n");
@@ -517,7 +521,7 @@ void CommandSenderTest::resetSentMessagesWhenPortClosed()
 
 void CommandSenderTest::resetToSendMessagesWhenPortClosed()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
@@ -535,7 +539,7 @@ void CommandSenderTest::resetToSendMessagesWhenPortClosed()
     communicator->closePort();
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
-    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
+    communicator->portFound(&m_info, &portDiscoverer);
 
     // Send new commands and up to 128 bytes and then one more
     for (auto i = 0; i < 16; ++i) {
@@ -553,7 +557,7 @@ void CommandSenderTest::resetToSendMessagesWhenPortClosed()
 
 void CommandSenderTest::callReplyLostOfListenersWhenPortClosed()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     // Create listeners
@@ -582,7 +586,7 @@ void CommandSenderTest::callReplyLostOfListenersWhenPortClosed()
 
 void CommandSenderTest::doNotCallReplyLostOfNullAndDeletedListenersWhenPortClosed()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     // Create listeners
@@ -612,7 +616,7 @@ void CommandSenderTest::resetStateWhenPortClosedWithError()
 {
     // This tests that closePortWithError has the same effect of closePort (all in one test)
 
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
@@ -649,7 +653,7 @@ void CommandSenderTest::resetStateWhenPortClosedWithError()
     communicator->closePortWithError("bla");
     auto serialPort = new TestSerialPort();
     TestPortDiscovery portDiscoverer(serialPort);
-    communicator->portFound(MachineInfo("a", "pn", "sn", "1"), &portDiscoverer);
+    communicator->portFound(&m_info, &portDiscoverer);
 
     // Send new commands and up to 128 bytes and then one more
     for (auto i = 0; i < 16; ++i) {
@@ -682,7 +686,7 @@ void CommandSenderTest::resetStateWhenMachineInitialized()
 {
     // This tests that machine reset has the same effect of closePort (all in one test)
 
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -749,7 +753,7 @@ void CommandSenderTest::resetStateWhenMachineInitialized()
 
 void CommandSenderTest::neverSendNewCommandsIfTheareAreEnqueuedOnes()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     QSignalSpy spy(communicator.get(), &MachineCommunication::dataSent);
@@ -768,7 +772,7 @@ void CommandSenderTest::neverSendNewCommandsIfTheareAreEnqueuedOnes()
 
 void CommandSenderTest::callCommandSentWhenACommandIsSent()
 {
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     TestCommandReplyListener listener;
@@ -781,7 +785,7 @@ void CommandSenderTest::callCommandSentWhenACommandIsSent()
 
 void CommandSenderTest::doNotCallCommandSentOfListenerIfListerWasDeleted()
 {
-    auto communicatorAndPort = createCommunicator();
+    auto communicatorAndPort = createCommunicator(&m_info);
     auto communicator = std::move(communicatorAndPort.first);
     auto serialPort = communicatorAndPort.second;
     CommandSender sender(communicator.get());
@@ -824,7 +828,7 @@ void CommandSenderTest::discardNestedCallsToResetState()
         MachineCommunication* m_communicator;
     };
 
-    auto communicator = std::move(createCommunicator().first);
+    auto communicator = std::move(createCommunicator(&m_info).first);
     CommandSender sender(communicator.get());
 
     auto listener1 = std::make_unique<ListenerWithReset>(communicator.get());

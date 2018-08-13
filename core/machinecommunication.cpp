@@ -9,7 +9,7 @@ MachineCommunication::MachineCommunication(unsigned int hardResetDelay)
 {
 }
 
-void MachineCommunication::portFound(MachineInfo, AbstractPortDiscovery* portDiscoverer)
+void MachineCommunication::portFound(MachineInfo*, AbstractPortDiscovery* portDiscoverer)
 {
     m_serialPort = portDiscoverer->obtainPort();
 

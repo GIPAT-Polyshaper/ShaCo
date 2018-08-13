@@ -17,8 +17,10 @@ win32:release:LIBS += -L../core/release -lcore
 HEADERS += \
     testportdiscovery.h \
     testserialport.h \
-    utils.h
+    utils.h \
+    testmachineinfo.h
 SOURCES += \
     testportdiscovery.cpp \
     testserialport.cpp \
-    utils.cpp
+    utils.cpp \
+    testmachineinfo.cpp
