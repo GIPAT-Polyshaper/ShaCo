@@ -174,6 +174,8 @@ void Controller::setWireTemperature(float temperature)
         return;
     }
 
+    m_settings.setWireTemperature(temperature);
+
     auto p = m_thread.worker()->wireController();
     if (streamingGCode()) {
         QMetaObject::invokeMethod(p, [p, temperature](){ p->setRealTimeTemperature(temperature); });
@@ -258,7 +260,7 @@ void Controller::setCharacterSendDelayUs(unsigned long us)
     m_settings.setCharacterSendDelayUs(us);
 
     auto p = m_thread.worker();
-    QMetaObject::invokeMethod(p, [p](){ p->updateCharacterSendDelayUs(); });
+    QMetaObject::invokeMethod(p, [p, us](){ p->setCharacterSendDelayUs(us); });
 
     emit characterSendDelayUsChanged();
 }
