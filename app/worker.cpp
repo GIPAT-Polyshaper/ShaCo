@@ -32,6 +32,7 @@ Worker::Worker()
     , m_wireController(new WireController(m_machineCommunicator.get(), m_commandSender.get()))
     , m_statusMonitor(new MachineStatusMonitor(1000, 3000, m_machineCommunicator.get())) // polling every second
 {
+    m_wireController->setTemperature(m_settings.wireTemperature());
 }
 
 PortDiscovery<QSerialPortInfo>* Worker::portDiscoverer() const
@@ -74,9 +75,8 @@ void Worker::setGCodeFile(QUrl fileUrl)
     emit gcodeSenderCreated(m_gcodeSender.get());
 }
 
-void Worker::updateCharacterSendDelayUs()
+void Worker::setCharacterSendDelayUs(unsigned long us)
 {
-    const auto us = m_settings.characterSendDelayUs();
     m_portDiscoverer->setCharacterSendDelayUs(us);
     m_machineCommunicator->setCharacterSendDelayUs(us);
 }

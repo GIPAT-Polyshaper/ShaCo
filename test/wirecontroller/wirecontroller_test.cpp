@@ -51,6 +51,7 @@ void WireControllerTest::setInitialTemperatureAndEmitSignalWhenMachineIsInitiali
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
 
     WireController wireController(communicator.get(), &commandSender);
+    wireController.setTemperature(30.0f);
 
     QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
     QSignalSpy wireOffSpy(&wireController, &WireController::wireOff);
@@ -411,6 +412,7 @@ void WireControllerTest::whenMachineInitializedSignalIsReceivedSwitchWireOffAndS
     QSignalSpy dataSentSpy(communicator.get(), &MachineCommunication::dataSent);
 
     WireController wireController(communicator.get(), &commandSender);
+    wireController.setTemperature(30.0f);
 
     QSignalSpy temperatureChangedSpy(&wireController, &WireController::temperatureChanged);
     QSignalSpy wireOffSpy(&wireController, &WireController::wireOff);

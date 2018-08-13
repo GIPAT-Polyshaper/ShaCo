@@ -3,7 +3,6 @@
 #include "immediatecommands.h"
 
 namespace {
-    const float initialTemperature = 30.0f;
     const int minPercentualRealTimeTemperature = 10;
     const int maxPercentualRealTimeTemperature = 200;
 
@@ -15,7 +14,7 @@ WireController::WireController(MachineCommunication *communicator, CommandSender
     : m_communicator(communicator)
     , m_commandSender(commandSender)
     , m_wireOn(false)
-    , m_baseTemperature(initialTemperature)
+    , m_baseTemperature(0.0f)
     , m_realTimePercent(100)
 {
     connect(m_communicator, &MachineCommunication::machineInitialized, this, &WireController::machineInitialized);

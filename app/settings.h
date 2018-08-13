@@ -10,6 +10,9 @@ public:
     unsigned long characterSendDelayUs() const;
     void setCharacterSendDelayUs(unsigned long us);
 
+    float wireTemperature() const;
+    void setWireTemperature(float t);
+
 private:
     QSettings m_settings;
 };

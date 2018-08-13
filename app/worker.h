@@ -54,13 +54,13 @@ public:
 
 public slots:
     void setGCodeFile(QUrl fileUrl);
-    void updateCharacterSendDelayUs();
+    void setCharacterSendDelayUs(unsigned long us);
 
 signals:
     void gcodeSenderCreated(GCodeSender* sender);
 
 private:
-    const Settings m_settings; // We only read settings on this thread
+    const Settings m_settings; // We only read settings at start, here
     std::unique_ptr<PortDiscovery<QSerialPortInfo>> m_portDiscoverer;
     std::unique_ptr<MachineCommunication> m_machineCommunicator;
     std::unique_ptr<CommandSender> m_commandSender;
