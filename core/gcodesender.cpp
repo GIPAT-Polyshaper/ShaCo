@@ -35,7 +35,6 @@ GCodeSender::GCodeSender(MachineCommunication* communicator, CommandSender* comm
     , m_machineStatusMonitor(machineStatusMonitor)
     , m_device(std::move(gcodeDevice))
     , m_running(false)
-    , m_expectedAcks(0)
     , m_startedSendingCommands(false)
 {
     m_device->setParent(nullptr);
@@ -95,11 +94,7 @@ void GCodeSender::commandSent(CommandCorrelationId)
 
 void GCodeSender::okReply(CommandCorrelationId)
 {
-    --m_expectedAcks;
-
-    if (canSuccessfullyFinishStreaming()) {
-        finishStreaming();
-    }
+    // Nothing to do here, we stop when machine goes idle again
 }
 
 void GCodeSender::errorReply(CommandCorrelationId, int errorCode)
@@ -124,8 +119,6 @@ void GCodeSender::readAndSendOneCommand()
             emitStreamingEndedAndReset(StreamEndReason::StreamError, tr("Could not read GCode line from input device"));
         } else if (!m_commandSender->sendCommand(line, 0, this)) {
             emitStreamingEndedAndReset(StreamEndReason::StreamError, tr("Invalid command in GCode stream"));
-        } else {
-            ++m_expectedAcks;
         }
     }
 }
@@ -170,8 +163,6 @@ void GCodeSender::finishStreaming()
 
 bool GCodeSender::canSuccessfullyFinishStreaming() const
 {
-    // qDebug() << "Acks to receive:" << m_expectedAcks << "running?" << m_running;
-
-    return m_device && m_device->atEnd() && m_running && m_expectedAcks == 0 &&
+    return m_device && m_device->atEnd() && m_running &&
             m_machineStatusMonitor->state() == MachineState::Idle;
 }

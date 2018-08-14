@@ -94,7 +94,6 @@ private Q_SLOTS:
     void emitStreamingEndedSignalWithErrorAndResetIfItIsNotPossibleToReadTheGCodeStream();
     void doNotStartIfMachineIsNotIdle();
     void emitStreamingEndedSignalWithSuccessOnlyAfterAllRepliesAreReceivedAndMachineIsIdleAgain();
-    void keepWaitingForAcksIfMachineGoesIdlePrematurely();
     void emitStreamingEndedSignalWithErrorAndResetIfMachineRepliesWithError();
     void doNotRestartIfStateGoesFromIdleToAnotherOneNotRunAndThenBackToIdle();
     void emitStreamingEndedSignalWithErrorAndResetIfMachineGoesInUnexpectedState();
@@ -432,41 +431,6 @@ void GCodeSenderTest::emitStreamingEndedSignalWithSuccessOnlyAfterAllRepliesAreR
 
     // Now machine goes Idle
     sendState(r.serialPort, "Idle");
-
-    QCOMPARE(endSpy.count(), 1);
-    QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::Completed);
-    QCOMPARE(endSpy.at(0).at(1).toString(), tr("Success"));
-}
-
-void GCodeSenderTest::keepWaitingForAcksIfMachineGoesIdlePrematurely()
-{
-    auto r = createRequirements();
-
-    auto buffer = new TestBuffer();
-    buffer->buffer() = "G01 X100\n";
-    GCodeSender fileSender(r.communicator.get(), r.commandSender.get(), r.wireController.get(), r.statusMonitor.get(), std::unique_ptr<QIODevice>(buffer));
-
-    QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
-    QSignalSpy dataSentSpy(r.communicator.get(), &MachineCommunication::dataSent);
-
-    fileSender.streamData();
-
-    // Now machine goes in Run state
-    sendState(r.serialPort, "Run");
-
-    QCOMPARE(dataSentSpy.count(), 2);
-
-    // No end signal
-    QCOMPARE(endSpy.count(), 0);
-
-    // Now machine goes Idle before acks, we have to wait
-    sendState(r.serialPort, "Idle");
-
-    // No end signal
-    QCOMPARE(endSpy.count(), 0);
-
-    // Replies (3 to wire controller, 1 to us)
-    sendAcks(r.serialPort, 4);
 
     QCOMPARE(endSpy.count(), 1);
     QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::Completed);
