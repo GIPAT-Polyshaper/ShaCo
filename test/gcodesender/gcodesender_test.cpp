@@ -94,7 +94,6 @@ private Q_SLOTS:
     void emitStreamingEndedSignalWithErrorAndResetIfItIsNotPossibleToReadTheGCodeStream();
     void doNotStartIfMachineIsNotIdle();
     void emitStreamingEndedSignalWithSuccessOnlyAfterAllRepliesAreReceivedAndMachineIsIdleAgain();
-    void keepWaitingForAcksIfMachineGoesIdlePrematurely();
     void emitStreamingEndedSignalWithErrorAndResetIfMachineRepliesWithError();
     void doNotRestartIfStateGoesFromIdleToAnotherOneNotRunAndThenBackToIdle();
     void emitStreamingEndedSignalWithErrorAndResetIfMachineGoesInUnexpectedState();
@@ -311,7 +310,8 @@ void GCodeSenderTest::sendAllCommandsAndStopIfGCodeIsShort()
 
     // Run and then Idle
     sendState(r.serialPort, "Run");
-    sendAcks(r.serialPort, 5);
+    // 3 commands from wire controller (wire off, set temp and wire on) plus 3 commands from us
+    sendAcks(r.serialPort, 6);
     sendState(r.serialPort, "Idle");
 
     QCOMPARE(dataSentSpy.count(), 5);
@@ -423,49 +423,14 @@ void GCodeSenderTest::emitStreamingEndedSignalWithSuccessOnlyAfterAllRepliesAreR
     // No end signal
     QCOMPARE(endSpy.count(), 0);
 
-    // Replies
-    sendAcks(r.serialPort, 2);
+    // Replies (3 to wire controller, 1 to us)
+    sendAcks(r.serialPort, 4);
 
     // No end signal, waiting to go idle
     QCOMPARE(endSpy.count(), 0);
 
     // Now machine goes Idle
     sendState(r.serialPort, "Idle");
-
-    QCOMPARE(endSpy.count(), 1);
-    QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::Completed);
-    QCOMPARE(endSpy.at(0).at(1).toString(), tr("Success"));
-}
-
-void GCodeSenderTest::keepWaitingForAcksIfMachineGoesIdlePrematurely()
-{
-    auto r = createRequirements();
-
-    auto buffer = new TestBuffer();
-    buffer->buffer() = "G01 X100\n";
-    GCodeSender fileSender(r.communicator.get(), r.commandSender.get(), r.wireController.get(), r.statusMonitor.get(), std::unique_ptr<QIODevice>(buffer));
-
-    QSignalSpy endSpy(&fileSender, &GCodeSender::streamingEnded);
-    QSignalSpy dataSentSpy(r.communicator.get(), &MachineCommunication::dataSent);
-
-    fileSender.streamData();
-
-    // Now machine goes in Run state
-    sendState(r.serialPort, "Run");
-
-    QCOMPARE(dataSentSpy.count(), 2);
-
-    // No end signal
-    QCOMPARE(endSpy.count(), 0);
-
-    // Now machine goes Idle before acks, we have to wait
-    sendState(r.serialPort, "Idle");
-
-    // No end signal
-    QCOMPARE(endSpy.count(), 0);
-
-    // Replies
-    sendAcks(r.serialPort, 2);
 
     QCOMPARE(endSpy.count(), 1);
     QCOMPARE(endSpy.at(0).at(0).value<GCodeSender::StreamEndReason>(), GCodeSender::StreamEndReason::Completed);
@@ -485,8 +450,8 @@ void GCodeSenderTest::emitStreamingEndedSignalWithErrorAndResetIfMachineRepliesW
 
     fileSender.streamData();
 
-    // ack for initial wire on commands, then error for our command
-    sendAcks(r.serialPort, 1);
+    // ack for initial wire commands, then error for our command
+    sendAcks(r.serialPort, 3);
     r.serialPort->simulateReceivedData("error:17\r\n");
 
     QCOMPARE(endSpy.count(), 1);
@@ -619,8 +584,8 @@ void GCodeSenderTest::doNotAllowRestartingStreamingAfterError()
 
     fileSender.streamData();
 
-    // ack for initial wire on commands, then error for our command
-    sendAcks(r.serialPort, 1);
+    // ack for initial wire commands, then error for our command
+    sendAcks(r.serialPort, 3);
     r.serialPort->simulateReceivedData("error:17\r\n");
 
     QCOMPARE(startSpy.count(), 1);

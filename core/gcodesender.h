@@ -61,7 +61,6 @@ private:
     MachineStatusMonitor* const m_machineStatusMonitor;
     std::unique_ptr<QIODevice> m_device; // When reset to NULL, we have finished/interrupted streaming
     bool m_running; // Machine switched to Run state
-    int m_expectedAcks;
     bool m_startedSendingCommands; // We went Idle so we started streaming
 };
 
