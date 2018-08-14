@@ -12,6 +12,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName("PolyShaper");
     QCoreApplication::setOrganizationDomain("polyshaper.eu");
     QCoreApplication::setApplicationName("ShaCo");
+    QCoreApplication::setApplicationVersion("1.0.0");
 
     QGuiApplication app(argc, argv);
 #ifdef Q_OS_MACOS

@@ -3,6 +3,8 @@
     error("Couldn't find the common.pri file!")
 }
 
+VERSION = 1.0.0
+
 TEMPLATE = app
 TARGET = ShaCo
 QT += quick quickcontrols2 serialport
