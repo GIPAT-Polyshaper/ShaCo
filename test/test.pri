@@ -12,5 +12,5 @@ QT -= gui
 # NOTE: These paths are relative to the .pro file including this (which is in a subdirectory)
 INCLUDEPATH += ../.. ..
 unix:LIBS += -L../testcommon -ltestcommon -L../../core -lcore
-win32:debug:LIBS += -L../../core/debug -lcore -L../testcommon/debug -ltestcommon
-win32:release:LIBS += -L../../core/release -lcore -L../testcommon/release -ltestcommon
+win32:debug:LIBS += -L../testcommon/debug -ltestcommon -L../../core/debug -lcore
+win32:release:LIBS += -L../testcommon/release -ltestcommon -L../../core/release -lcore
