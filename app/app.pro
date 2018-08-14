@@ -7,7 +7,7 @@ VERSION = 1.0.0
 
 TEMPLATE = app
 TARGET = ShaCo
-QT += quick quickcontrols2 serialport
+QT += quick quickcontrols2 serialport svg
 app.depends = core
 macx:ICON = ../images/ShaCo.icns
 win32:RC_ICONS = ../images/ShaCo.ico
