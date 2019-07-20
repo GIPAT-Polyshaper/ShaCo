@@ -184,7 +184,8 @@ private:
 
     bool vendorAndProductMatch(const SerialPortInfo& p)
     {
-        return p.vendorIdentifier() == 0x2341 && p.productIdentifier() == 0x0043;
+        return  (p.vendorIdentifier() == 0x2341 && p.productIdentifier() == 0x0043)  // Arduino UNO R3 with ATmega16u2
+              ||(p.vendorIdentifier() == 0x10c4 && p.productIdentifier() == 0xea60); // Silabs CP210x
     }
 
     void dataAvailable()

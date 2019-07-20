@@ -26,7 +26,7 @@ void WorkerThread::run()
 }
 
 Worker::Worker()
-    : m_portDiscoverer(new PortDiscovery<QSerialPortInfo>(QSerialPortInfo::availablePorts, [](QSerialPortInfo p){ return std::make_unique<SerialPort>(p); }, 1000, 300, 5, m_settings.characterSendDelayUs()))
+    : m_portDiscoverer(new PortDiscovery<QSerialPortInfo>(QSerialPortInfo::availablePorts, [](QSerialPortInfo p){ return std::make_unique<SerialPort>(p); }, 1000, 500, 5, m_settings.characterSendDelayUs()))
     , m_machineCommunicator(new MachineCommunication(1000))
     , m_commandSender(new CommandSender(m_machineCommunicator.get()))
     , m_wireController(new WireController(m_machineCommunicator.get(), m_commandSender.get()))

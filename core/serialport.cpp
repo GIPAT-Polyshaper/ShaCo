@@ -19,9 +19,16 @@ SerialPort::SerialPort(const QSerialPortInfo& portInfo)
 bool SerialPort::open()
 {
     m_serialPort.setBaudRate(QSerialPort::Baud115200);
-    m_serialPort.setFlowControl(QSerialPort::HardwareControl);
+    m_serialPort.setFlowControl(QSerialPort::SoftwareControl);
 
     auto retval = m_serialPort.open(QIODevice::ReadWrite);
+
+    // required to correctly reset ESP32
+    // see ESP32 Datasheet V3.1 pages 9 and 10
+    m_serialPort.setRequestToSend(true);
+    m_serialPort.setDataTerminalReady(false);
+    QThread::usleep(100);
+    m_serialPort.setRequestToSend(false);
 
     return retval;
 }
